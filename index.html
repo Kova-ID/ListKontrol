@@ -1,0 +1,4534 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <title>ListKontrol - Suivi de Chantier</title>
+
+    <!-- 
+        External Dependencies:
+        - Leaflet.js: Interactive map rendering (MIT License)
+        - leaflet-simple-map-screenshoter: Fast map capture for reports (MIT License)
+        - html2canvas: Fallback screenshot method for older browsers (MIT License)
+        - Barlow & JetBrains Mono: Typography (Open Font License)
+    -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-simple-map-screenshoter"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <!-- Application Styles -->
+    <style>
+/**
+ * ListKontrol - Main Stylesheet
+ * ============================
+ * 
+ * Design system based on a professional construction/industrial aesthetic.
+ * Uses Barlow (body) and JetBrains Mono (technical data) for clear hierarchy.
+ * Color palette: Dark navy primary, orange accent for CTAs and highlights.
+ * 
+ * Architecture:
+ * - CSS custom properties for consistent theming
+ * - Mobile-first responsive breakpoint at 768px
+ * - BEM-inspired naming for clarity
+ * - Animations kept minimal for professional feel
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+/* ==========================================================================
+   Design Tokens
+   ========================================================================== */
+:root {
+    --primary: #0f172a;
+    --primary-light: #1e293b;
+    --accent: #f97316;
+    --accent-dark: #ea580c;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+    --bg: #f8fafc;
+    --card: #ffffff;
+    --text: #0f172a;
+    --text-muted: #64748b;
+    --border: #e2e8f0;
+    --shadow: rgba(15, 23, 42, 0.1);
+}
+
+/* ==========================================================================
+   Reset & Base
+   ========================================================================== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Barlow', sans-serif;
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    color: var(--text);
+    min-height: 100vh;
+}
+
+/* ==========================================================================
+   Layout: App Container (sidebar + main split)
+   ========================================================================== */
+.app-container {
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* ==========================================================================
+   Sidebar: Project navigation and management
+   ========================================================================== */
+.sidebar {
+    width: 360px;
+    background: var(--card);
+    border-right: 2px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    box-shadow: 4px 0 24px var(--shadow);
+    position: relative;
+    z-index: 1000;
+}
+
+.header {
+    padding: 24px;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+    color: white;
+    border-bottom: 3px solid var(--accent);
+}
+
+.header h1 {
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 4px;
+    letter-spacing: -0.5px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+/* Version badge - monospace for technical appearance */
+.version {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 3px 8px;
+    background: linear-gradient(135deg, rgba(255,255,255,0.2), rgba(255,255,255,0.1));
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 12px;
+    color: rgba(255,255,255,0.95);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-family: 'JetBrains Mono', monospace;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.header p {
+    font-size: 13px;
+    opacity: 0.8;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.project-section {
+    padding: 20px;
+    border-bottom: 1px solid var(--border);
+}
+
+.section-title {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+}
+
+/* ==========================================================================
+   Buttons: Shared button system
+   ========================================================================== */
+.btn {
+    padding: 12px 20px;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 14px;
+    font-family: 'Barlow', sans-serif;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-primary {
+    background: var(--accent);
+    color: white;
+    width: 100%;
+    justify-content: center;
+}
+
+.btn-primary:hover {
+    background: var(--accent-dark);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3);
+}
+
+.btn-secondary {
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--border);
+}
+
+.btn-secondary:hover {
+    background: white;
+    border-color: var(--accent);
+}
+
+.btn-danger {
+    background: var(--danger);
+    color: white;
+}
+
+.btn-danger:hover {
+    background: #dc2626;
+}
+
+.btn-success {
+    background: var(--success);
+    color: white;
+}
+
+.btn-success:hover {
+    background: #059669;
+}
+
+.btn-sm {
+    padding: 6px 12px;
+    font-size: 12px;
+    border-radius: 6px;
+}
+
+/* ==========================================================================
+   Project Cards: Sidebar project list items
+   ========================================================================== */
+.project-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+}
+
+.project-card {
+    background: white;
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.project-card:hover {
+    border-color: var(--accent);
+    transform: translateX(4px);
+    box-shadow: 0 4px 12px var(--shadow);
+}
+
+.project-card.active {
+    border-color: var(--accent);
+    background: linear-gradient(135deg, #fff7ed 0%, white 100%);
+    box-shadow: 0 4px 16px rgba(249, 115, 22, 0.2);
+}
+
+.project-name {
+    font-weight: 600;
+    font-size: 15px;
+    margin-bottom: 8px;
+    color: var(--text);
+}
+
+.project-meta {
+    display: flex;
+    gap: 12px;
+    font-size: 12px;
+    color: var(--text-muted);
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.project-meta span {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* ==========================================================================
+   Status Badges: Visual indicators for point status
+   ========================================================================== */
+.badge {
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.badge-todo { background: #fef3c7; color: #92400e; }
+.badge-progress { background: #dbeafe; color: #1e40af; }
+.badge-done { background: #d1fae5; color: #065f46; }
+
+/* ==========================================================================
+   Main Content: Map area and toolbar
+   ========================================================================== */
+.main-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.toolbar {
+    background: white;
+    border-bottom: 2px solid var(--border);
+    padding: 16px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 8px var(--shadow);
+}
+
+.toolbar-left {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.toolbar-right {
+    display: flex;
+    gap: 8px;
+}
+
+.current-project {
+    font-weight: 600;
+    font-size: 18px;
+    color: var(--primary);
+}
+
+#map {
+    flex: 1;
+    position: relative;
+}
+
+/* ==========================================================================
+   Modal System: Overlay dialogs for forms and confirmations
+   ========================================================================== */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(15, 23, 42, 0.7);
+    backdrop-filter: blur(4px);
+    z-index: 2000;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.2s;
+}
+
+.modal.active {
+    display: flex;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.modal-content {
+    background: white;
+    border-radius: 16px;
+    width: 90%;
+    max-width: 600px;
+    max-height: 85vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(15, 23, 42, 0.3);
+    animation: slideUp 0.3s;
+}
+
+@keyframes slideUp {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.modal-header {
+    padding: 24px;
+    border-bottom: 2px solid var(--border);
+    background: linear-gradient(135deg, var(--bg) 0%, white 100%);
+}
+
+.modal-header h2 {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--primary);
+}
+
+.modal-body {
+    padding: 24px;
+}
+
+.modal-footer {
+    padding: 20px 24px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    background: var(--bg);
+}
+
+/* ==========================================================================
+   Forms: Input fields, textareas, selects
+   ========================================================================== */
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: var(--text);
+    font-size: 14px;
+}
+
+.form-input,
+.form-textarea,
+.form-select {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: 'Barlow', sans-serif;
+    transition: all 0.2s;
+}
+
+.form-input:focus,
+.form-textarea:focus,
+.form-select:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
+}
+
+.form-textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+
+/* ==========================================================================
+   Photo Upload: Drag area and multi-photo grid preview
+   ========================================================================== */
+.photo-upload {
+    border: 2px dashed var(--border);
+    border-radius: 8px;
+    padding: 32px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: var(--bg);
+}
+
+.photo-upload:hover {
+    border-color: var(--accent);
+    background: white;
+}
+
+.photo-preview {
+    max-width: 100%;
+    max-height: 200px;
+    margin-top: 12px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px var(--shadow);
+}
+
+/* Multi-photo grid: Shows thumbnails of all attached photos */
+.photo-previews-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.photo-previews-grid .photo-thumb {
+    position: relative;
+    border-radius: 8px;
+    overflow: hidden;
+    aspect-ratio: 1;
+}
+
+.photo-previews-grid .photo-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.photo-previews-grid .photo-thumb .remove-photo {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    background: var(--danger);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.photo-previews-grid .photo-thumb:hover .remove-photo {
+    opacity: 1;
+}
+
+/* ==========================================================================
+   Points Panel: Floating side panel with point list
+   ========================================================================== */
+.points-panel {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    width: 320px;
+    max-height: calc(100vh - 160px);
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px var(--shadow);
+    overflow: hidden;
+    z-index: 1000;
+    display: none;
+}
+
+.points-panel.active {
+    display: flex;
+    flex-direction: column;
+}
+
+.points-header {
+    padding: 16px;
+    background: var(--primary);
+    color: white;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.points-header h3 {
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.close-panel {
+    background: transparent;
+    border: none;
+    color: white;
+    cursor: pointer;
+    font-size: 20px;
+    padding: 4px;
+}
+
+.points-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+}
+
+.point-item {
+    background: var(--bg);
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.point-item:hover {
+    border-color: var(--accent);
+    transform: translateX(-4px);
+}
+
+.point-item.selected {
+    border-color: var(--accent);
+    background: #fff7ed;
+}
+
+.point-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    margin-bottom: 8px;
+}
+
+.point-title {
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--primary);
+}
+
+.point-address {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+    font-style: italic;
+}
+
+.point-comment {
+    font-size: 13px;
+    color: var(--text);
+    margin-bottom: 8px;
+    line-height: 1.4;
+}
+
+.point-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+/* Status selector: Quick-toggle buttons for point status */
+.status-selector {
+    display: flex;
+    gap: 6px;
+    background: var(--bg);
+    padding: 4px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+}
+
+.btn-status {
+    width: 40px;
+    height: 40px;
+    border: 2px solid transparent;
+    border-radius: 6px;
+    background: white;
+    cursor: pointer;
+    font-size: 20px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-status:hover {
+    transform: scale(1.1);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+.btn-status.status-todo.active { border-color: #f59e0b; background: #fef3c7; }
+.btn-status.status-progress.active { border-color: #3b82f6; background: #dbeafe; }
+.btn-status.status-done.active { border-color: #10b981; background: #d1fae5; }
+
+/* ==========================================================================
+   Animations
+   ========================================================================== */
+.spinner {
+    border: 3px solid var(--border);
+    border-top: 3px solid var(--accent);
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.1); opacity: 0.8; }
+}
+
+/* ==========================================================================
+   Leaflet Overrides: Custom popup and control styles
+   ========================================================================== */
+.custom-popup {
+    font-family: 'Barlow', sans-serif;
+}
+
+.custom-popup .leaflet-popup-content-wrapper {
+    border-radius: 8px;
+    padding: 0;
+}
+
+.custom-popup .leaflet-popup-content {
+    margin: 0;
+    width: 240px !important;
+}
+
+.leaflet-control-layers {
+    border-radius: 8px !important;
+    border: 2px solid var(--border) !important;
+    box-shadow: 0 4px 12px var(--shadow) !important;
+}
+
+.leaflet-control-layers-toggle {
+    background-size: 20px 20px !important;
+    width: 40px !important;
+    height: 40px !important;
+}
+
+.leaflet-control-layers-list {
+    font-family: 'Barlow', sans-serif !important;
+}
+
+.leaflet-control-layers label {
+    font-size: 14px !important;
+    padding: 4px 0 !important;
+}
+
+.popup-content { padding: 12px; }
+.popup-status { margin-bottom: 8px; }
+.popup-comment { font-size: 13px; margin-bottom: 8px; color: var(--text-muted); }
+.popup-image { width: 100%; height: 120px; object-fit: cover; border-radius: 6px; margin-bottom: 8px; }
+
+/* ==========================================================================
+   Responsive: Mobile layout (sidebar becomes full-screen overlay)
+   ========================================================================== */
+@media (max-width: 768px) {
+    .sidebar {
+        width: 100%;
+        max-width: 100%;
+        position: fixed;
+        left: -100%;
+        transition: left 0.3s;
+        z-index: 1500;
+        height: 100vh;
+    }
+
+    .sidebar.mobile-open { left: 0; }
+
+    .main-content { width: 100%; }
+
+    .toolbar {
+        flex-direction: column;
+        gap: 12px;
+        align-items: stretch;
+    }
+
+    .toolbar-left,
+    .toolbar-right {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .toolbar-right { flex-wrap: wrap; }
+
+    .btn-sm {
+        padding: 10px 16px;
+        font-size: 13px;
+    }
+
+    .points-panel {
+        width: calc(100% - 32px);
+        right: 16px;
+        left: 16px;
+        max-height: 60vh;
+    }
+
+    .modal-content {
+        width: 95%;
+        max-height: 90vh;
+    }
+
+    /* Prevent iOS zoom on input focus */
+    .form-input,
+    .form-textarea,
+    .form-select {
+        font-size: 16px;
+    }
+
+    /* Larger touch targets for mobile (Apple HIG: 44px minimum) */
+    .btn { min-height: 44px; }
+    .project-card { padding: 20px; }
+
+    .photo-upload {
+        padding: 40px 20px;
+        font-size: 16px;
+    }
+
+    /* Mobile menu toggle button */
+    .menu-toggle {
+        position: fixed;
+        top: 16px;
+        left: 16px;
+        z-index: 1600;
+        background: var(--primary);
+        color: white;
+        border: none;
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        box-shadow: 0 4px 12px var(--shadow);
+        cursor: pointer;
+    }
+}
+
+@media (min-width: 769px) {
+    .menu-toggle { display: none; }
+}
+
+/* ==========================================================================
+   Scrollbar: Custom styling for webkit browsers
+   ========================================================================== */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+    </style>
+</head>
+<body>
+    <!-- Mobile menu toggle - fixed position button for sidebar access on small screens -->
+    <button class="menu-toggle" onclick="toggleMobileMenu()">☰</button>
+
+    <div class="app-container">
+        <!-- Sidebar: Project navigation and management -->
+        <div class="sidebar">
+            <div class="header">
+                <h1>🏗️ ListK <span class="version">Alpha 0.7.0</span></h1>
+                <p>Suivi professionnel de chantiers</p>
+                <div style="display:flex; align-items:center; gap:8px; margin-top:8px;">
+                    <span id="cloudStatus" style="font-size:12px; font-family:'JetBrains Mono',monospace;">☁️ <span style="color:#6b7280">Hors ligne</span></span>
+                    <button class="btn btn-sm" onclick="showCloudSettings()" style="font-size:11px; padding:2px 8px;" title="Paramètres Cloud">⚙️</button>
+                </div>
+            </div>
+
+            <div class="project-section">
+                <div class="section-title">Nouveau Projet</div>
+                <button class="btn btn-primary" onclick="showNewProjectModal()">
+                    ➕ Créer un projet
+                </button>
+            </div>
+
+            <div class="project-section">
+                <div class="section-title">Archives</div>
+                <button class="btn btn-secondary" onclick="showArchivesModal()">
+                    📦 Voir les archives (<span id="archiveCount">0</span>)
+                </button>
+            </div>
+
+            <div class="project-list" id="projectList">
+                <!-- Projects will be rendered dynamically by js/ui/projects.js -->
+            </div>
+        </div>
+
+        <!-- Main Content: Map and toolbar -->
+        <div class="main-content">
+            <div class="toolbar">
+                <div class="toolbar-left">
+                    <div class="current-project" id="currentProjectName">
+                        Sélectionnez un projet
+                    </div>
+                </div>
+                <div class="toolbar-right" id="projectTools" style="display: none;">
+                    <button class="btn btn-secondary btn-sm" onclick="centerOnMyLocation()" title="Me localiser">
+                        📍 Ma position
+                    </button>
+                    <button class="btn btn-secondary btn-sm" onclick="showPointsPanel()">
+                        📍 Points (<span id="pointsCount">0</span>)
+                    </button>
+                    <button class="btn btn-success btn-sm" onclick="generateReport()">
+                        📊 Générer Rapport
+                    </button>
+                    <button class="btn btn-secondary btn-sm" onclick="showSyncImportModal()" title="Importer modifications depuis rapport interactif">
+                        📥 Importer
+                    </button>
+                    <button class="btn btn-secondary btn-sm" onclick="archiveProject()">
+                        📦 Archiver
+                    </button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteCurrentProject()" title="Supprimer ce projet">
+                        🗑️ Supprimer
+                    </button>
+                </div>
+            </div>
+
+            <div id="map"></div>
+
+            <!-- Report Generation Progress Overlay -->
+            <div id="reportProgress" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 30px 40px; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.3); z-index: 10000; text-align: center; min-width: 320px;">
+                <h3 style="margin: 0 0 20px 0; color: #0f172a;">⏳ Génération du rapport</h3>
+                <div style="font-size: 24px; font-weight: bold; color: #f97316; margin-bottom: 10px;" id="reportProgressText">Point 1/5</div>
+                <div style="background: #e2e8f0; height: 8px; border-radius: 4px; overflow: hidden; margin-bottom: 20px;">
+                    <div id="reportProgressBar" style="background: linear-gradient(90deg, #f97316, #ea580c); height: 100%; width: 20%; transition: width 0.3s;"></div>
+                </div>
+                <div style="color: #64748b; font-size: 14px; margin-bottom: 20px;" id="reportProgressDetail">Capture de la carte...</div>
+                <button onclick="cancelReportGeneration()" style="background: #ef4444; color: white; border: none; padding: 10px 24px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600;">
+                    ❌ Annuler la génération
+                </button>
+            </div>
+            
+            <!-- Backdrop for progress overlay -->
+            <div id="reportProgressBackdrop" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999;"></div>
+
+            <!-- Points Panel: Floating panel listing all points for current project -->
+            <div class="points-panel" id="pointsPanel">
+                <div class="points-header">
+                    <h3>Points du projet</h3>
+                    <button class="close-panel" onclick="hidePointsPanel()">✕</button>
+                </div>
+                <div class="points-list" id="pointsList">
+                    <!-- Points rendered by js/ui/points.js -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Project Modal -->
+    <div class="modal" id="newProjectModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Nouveau Projet</h2>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Nom du projet *</label>
+                    <input type="text" class="form-input" id="projectName" placeholder="Ex: Suivi travaux Route D1">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Description</label>
+                    <textarea class="form-textarea" id="projectDescription" placeholder="Description du projet..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('newProjectModal')">Annuler</button>
+                <button class="btn btn-primary" onclick="createProject()">Créer le projet</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Point Modal -->
+    <div class="modal" id="newPointModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Nouveau Point</h2>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Titre *</label>
+                    <input type="text" class="form-input" id="pointTitle" placeholder="Ex: Réparation chaussée">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Commentaire / Tâche à effectuer *</label>
+                    <textarea class="form-textarea" id="pointComment" placeholder="Décrivez les travaux à réaliser..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Photos</label>
+                    <div class="photo-upload" onclick="document.getElementById('photoInput').click()">
+                        <div>📷 Cliquez pour prendre une photo</div>
+                        <small style="color: var(--text-muted);">Vous pouvez ajouter plusieurs photos</small>
+                        <input type="file" id="photoInput" accept="image/*" capture="environment" multiple style="display: none" onchange="previewPhotos(event)">
+                    </div>
+                    <div id="photoPreviews" class="photo-previews-grid"></div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Statut</label>
+                    <select class="form-select" id="pointStatus">
+                        <option value="todo">À faire</option>
+                        <option value="progress">En cours</option>
+                        <option value="done">Terminé</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Adresse (détectée)</label>
+                    <input type="text" class="form-input" id="pointAddress" readonly>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('newPointModal')">Annuler</button>
+                <button class="btn btn-primary" onclick="savePoint()">Enregistrer le point</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Point Modal -->
+    <div class="modal" id="editPointModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Modifier le Point</h2>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Titre</label>
+                    <input type="text" class="form-input" id="editPointTitle">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Commentaire</label>
+                    <textarea class="form-textarea" id="editPointComment"></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Statut</label>
+                    <select class="form-select" id="editPointStatus">
+                        <option value="todo">À faire</option>
+                        <option value="progress">En cours</option>
+                        <option value="done">Terminé</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Photos</label>
+                    <div id="editPhotoPreviews" class="photo-previews-grid"></div>
+                    <div style="margin-top: 8px;">
+                        <button class="btn btn-secondary btn-sm" onclick="document.getElementById('editPhotoInput').click()">
+                            📷 Ajouter une photo
+                        </button>
+                        <input type="file" id="editPhotoInput" accept="image/*" capture="environment" multiple style="display: none" onchange="previewEditPhotos(event)">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-danger" onclick="deletePoint()">Supprimer</button>
+                <button class="btn btn-secondary" onclick="closeModal('editPointModal')">Annuler</button>
+                <button class="btn btn-primary" onclick="updatePoint()">Enregistrer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Archive Modal -->
+    <div class="modal" id="archiveModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📦 Archiver le projet</h2>
+            </div>
+            <div class="modal-body">
+                <p style="margin-bottom: 20px; color: var(--text-muted);">
+                    Vous êtes sur le point d'archiver le projet <strong id="archiveProjectName"></strong>.
+                    Les archives sont conservées pendant la durée choisie, puis supprimées automatiquement.
+                </p>
+                <div class="form-group">
+                    <label class="form-label">Durée de conservation</label>
+                    <select class="form-select" id="archiveDuration">
+                        <option value="3">3 mois</option>
+                        <option value="6" selected>6 mois</option>
+                        <option value="9">9 mois</option>
+                        <option value="12">12 mois</option>
+                    </select>
+                </div>
+                <div style="background: #fef3c7; padding: 12px; border-radius: 8px; font-size: 14px; color: #92400e;">
+                    ⚠️ Le projet sera retiré des projets actifs et accessible uniquement via les archives.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('archiveModal')">Annuler</button>
+                <button class="btn btn-primary" onclick="confirmArchive()">Archiver</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Archives List Modal -->
+    <div class="modal" id="archivesModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📦 Archives</h2>
+            </div>
+            <div class="modal-body">
+                <div id="archivesList"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('archivesModal')">Fermer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sync Import Modal: For importing interactive report changes back into the app -->
+    <div class="modal" id="syncImportModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📥 Importer des modifications</h2>
+            </div>
+            <div class="modal-body">
+                <p style="margin-bottom: 16px; color: var(--text-muted);">
+                    Importez un fichier de synchronisation (.json) généré depuis un rapport interactif.
+                    Les modifications de statut, photos et commentaires seront appliquées au projet.
+                </p>
+                <div class="photo-upload" onclick="document.getElementById('syncFileInput').click()">
+                    <div>📁 Cliquez pour sélectionner le fichier .json</div>
+                    <input type="file" id="syncFileInput" accept=".json" style="display: none" onchange="handleSyncFileSelect(event)">
+                </div>
+                <div id="syncPreview" style="display: none; margin-top: 16px;"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('syncImportModal')">Annuler</button>
+                <button class="btn btn-primary" id="applySyncBtn" onclick="applySyncChanges()" disabled>Appliquer les modifications</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cloud Settings Modal -->
+    <div class="modal" id="cloudSettingsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>☁️ Paramètres Cloud (Scaleway)</h2>
+            </div>
+            <div class="modal-body">
+                <p style="margin-bottom:16px; color:var(--text-muted); font-size:13px;">
+                    Connectez ListKontrol à votre backend Scaleway pour sauvegarder vos données dans le cloud (Varsovie, UE).
+                    Les données restent aussi en local pour une utilisation hors ligne.
+                </p>
+
+                <div style="margin-bottom:12px;">
+                    <label style="font-weight:600; font-size:13px; display:block; margin-bottom:4px;">URL de l'API</label>
+                    <input type="url" id="cloudApiUrl" class="input" placeholder="https://votre-fonction.functions.fnc.fr-par.scw.cloud" style="width:100%;">
+                </div>
+
+                <div style="margin-bottom:12px;">
+                    <label style="font-weight:600; font-size:13px; display:block; margin-bottom:4px;">Clé API</label>
+                    <input type="password" id="cloudApiKey" class="input" placeholder="scw-xxxxxxxx" style="width:100%;">
+                </div>
+
+                <div style="margin-bottom:16px;">
+                    <label style="font-weight:600; font-size:13px; display:flex; align-items:center; gap:8px;">
+                        <input type="checkbox" id="cloudEnabled">
+                        Activer la synchronisation cloud
+                    </label>
+                </div>
+
+                <div style="background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:12px; font-size:12px; color:var(--text-muted);">
+                    <strong>📍 Datacenter:</strong> Varsovie, Pologne (UE)<br>
+                    <strong>🔒 Chiffrement:</strong> HTTPS + token d'authentification<br>
+                    <strong>📱 Mode hors ligne:</strong> Les données locales restent toujours accessibles
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('cloudSettingsModal')">Annuler</button>
+                <button class="btn btn-primary" onclick="forceCloudSync()">🔄 Sync maintenant</button>
+                <button class="btn btn-success" onclick="saveCloudSettings()">💾 Enregistrer</button>
+            </div>
+        </div>
+    </div>
+
+    <!--
+        JavaScript Modules - Loaded in dependency order:
+        1. core/helpers.js      - Utility functions (timeout, image loading, tile waiting)
+        2. storage/storage.js   - Data persistence (localStorage)
+        3. storage/cloud.js     - Cloud sync (Scaleway serverless) [NEW in 0.7.0]
+        4. map/map.js           - Leaflet map initialization and marker management
+        5. map/capture.js       - Map screenshot capture for report generation
+        6. ui/modals.js         - Modal dialog management
+        7. ui/projects.js       - Project CRUD and sidebar rendering
+        8. ui/archives.js       - Archive management
+        9. ui/points.js         - Point CRUD, status management, multi-photo support
+        10. reports/standard.js  - Standard HTML report generation
+        11. reports/interactive.js - Interactive HTML report with collaboration features
+        12. reports/sync.js      - Sync file import/export for interactive report changes
+        13. reports/csv.js       - CSV/Excel export
+        14. reports/text.js      - Plain text export
+        15. core/app.js          - Application entry point, initialization, global event handlers
+    -->
+    <script>
+    // === js/core/helpers.js ===
+/**
+ * ListKontrol - Core Helper Utilities
+ * ===================================
+ * 
+ * Robust async helpers that prevent infinite Promise hangs.
+ * These are critical for report generation where map tile loading,
+ * screenshot capture, and image processing can stall indefinitely.
+ * 
+ * Why these exist:
+ * - Leaflet tile loading has no guaranteed completion callback
+ * - html2canvas can hang on CORS-restricted tiles
+ * - Image.onload never fires if src is invalid/empty
+ * - Promise.race with timeouts guarantees forward progress
+ */
+
+/**
+ * Race a promise against a timeout.
+ * Prevents infinite waiting if an async operation never resolves.
+ * 
+ * @param {Promise} promise - The operation to race
+ * @param {number} ms - Timeout in milliseconds
+ * @param {string} label - Description for error messages
+ * @returns {Promise} Resolves with the promise result or rejects on timeout
+ */
+function withTimeout(promise, ms, label = 'operation') {
+    return Promise.race([
+        promise,
+        new Promise((_, reject) =>
+            setTimeout(() => reject(new Error(`${label} timeout (${ms}ms)`)), ms)
+        )
+    ]);
+}
+
+/**
+ * Load an image element with guaranteed resolution.
+ * Standard img.onload can hang forever if the src is broken.
+ * This wraps it with a timeout for safety.
+ * 
+ * @param {string} src - Image source URL or data URI
+ * @param {number} ms - Timeout in milliseconds (default: 3000)
+ * @returns {Promise<HTMLImageElement>} Loaded image element
+ */
+function loadImage(src, ms = 3000) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+
+        const timeoutId = setTimeout(() => {
+            img.onload = img.onerror = null;
+            reject(new Error(`Image load timeout (${ms}ms)`));
+        }, ms);
+
+        img.onload = () => {
+            clearTimeout(timeoutId);
+            img.onload = img.onerror = null;
+            resolve(img);
+        };
+
+        img.onerror = () => {
+            clearTimeout(timeoutId);
+            img.onload = img.onerror = null;
+            reject(new Error('Image load error'));
+        };
+
+        img.src = src;
+    });
+}
+
+/**
+ * Wait for Leaflet map tiles to finish loading.
+ * Uses the map 'load' event with a safety timeout fallback,
+ * because tiles may already be cached (event won't fire) or
+ * may fail to load on spotty mobile connections.
+ * 
+ * @param {number} timeout - Maximum wait time in ms (default: 2000)
+ * @returns {Promise<void>}
+ */
+function waitForTiles(timeout = 2000) {
+    return new Promise(resolve => {
+        let loaded = false;
+
+        const onLoad = () => {
+            if (!loaded) {
+                loaded = true;
+                map.off('load', onLoad);
+                resolve();
+            }
+        };
+
+        map.once('load', onLoad);
+        // Safety: resolve after timeout even if tiles haven't loaded
+        setTimeout(onLoad, timeout);
+    });
+}
+
+/**
+ * Compress an image file to JPEG with max width constraint.
+ * Reduces storage usage for photos taken on modern smartphones
+ * (which can be 4000x3000+ pixels at 5MB+).
+ * 
+ * Target: 1200px max width, 70% JPEG quality ≈ 100-200KB per photo.
+ * This is a good balance between visual quality for reports and storage efficiency.
+ * 
+ * @param {File} file - The image file from input[type=file]
+ * @returns {Promise<string>} Compressed image as data URL
+ */
+function compressImage(file) {
+    return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = new Image();
+            img.onload = function() {
+                const canvas = document.createElement('canvas');
+
+                // Max 1200px wide - sufficient for HTML reports while keeping file size down
+                let width = img.width;
+                let height = img.height;
+                const maxWidth = 1200;
+
+                if (width > maxWidth) {
+                    height = (height * maxWidth) / width;
+                    width = maxWidth;
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+
+                // 70% JPEG quality: good visual quality, ~80% size reduction
+                const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7);
+
+                console.log('Image compressed:',
+                    (e.target.result.length / 1024).toFixed(0), 'KB →',
+                    (compressedDataUrl.length / 1024).toFixed(0), 'KB'
+                );
+
+                resolve(compressedDataUrl);
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+    </script>
+    <script>
+    // === js/storage/storage.js ===
+/**
+ * ListKontrol - Storage Module
+ * ============================
+ * 
+ * Handles data persistence for projects and archives.
+ * Currently uses localStorage as primary storage.
+ * 
+ * Architecture decision: localStorage first, not IndexedDB
+ * - Simpler API, synchronous reads for faster UI
+ * - 5-10MB limit is adequate for project metadata
+ * - Photos are base64-encoded inline (compressed to ~100-200KB each)
+ * - For heavy photo usage, future versions will use external storage (R2/S3)
+ * 
+ * The window.storage API (from Claude artifacts) is supported as an
+ * alternative backend, with automatic fallback to localStorage.
+ * 
+ * Future: This module will be extended with Scaleway cloud sync
+ * for multi-device support and persistent remote storage.
+ */
+
+/**
+ * Load all projects from storage.
+ * Tries window.storage first (artifact environment), falls back to localStorage.
+ * 
+ * @returns {Promise<Array>} Array of project objects
+ */
+async function loadProjects() {
+    // Check for artifact storage API (available in Claude.ai environment)
+    if (!window.storage) {
+        // Migration: rename old vrd_projects key to listk_projects
+        const oldStored = localStorage.getItem('vrd_projects');
+        if (oldStored && !localStorage.getItem('listk_projects')) {
+            localStorage.setItem('listk_projects', oldStored);
+            localStorage.removeItem('vrd_projects');
+            console.log('📦 Migrated vrd_projects → listk_projects');
+        }
+        const stored = localStorage.getItem('listk_projects');
+        projects = stored ? JSON.parse(stored) : [];
+        return;
+    }
+
+    try {
+        const result = await window.storage.list('project:');
+        if (result && result.keys) {
+            projects = [];
+            for (const key of result.keys) {
+                const data = await window.storage.get(key);
+                if (data) {
+                    projects.push(JSON.parse(data.value));
+                }
+            }
+        }
+    } catch (error) {
+        // Graceful degradation: fall back to localStorage
+        console.log('Storage API unavailable, using localStorage');
+        const stored = localStorage.getItem('listk_projects');
+        projects = stored ? JSON.parse(stored) : [];
+    }
+}
+
+/**
+ * Save a project to storage.
+ * Updates the in-memory projects array and persists to storage backend.
+ * 
+ * @param {Object} project - The project object to save
+ * @throws {Error} If both storage backends fail (usually quota exceeded)
+ */
+async function saveProject(project) {
+    // Update in-memory array
+    const index = projects.findIndex(p => p.id === project.id);
+    if (index >= 0) {
+        projects[index] = project;
+    } else {
+        projects.push(project);
+    }
+
+    if (!window.storage) {
+        try {
+            localStorage.setItem('listk_projects', JSON.stringify(projects));
+        } catch (e) {
+            console.error('localStorage save failed:', e);
+            throw e;
+        }
+        // Cloud sync (non-blocking)
+        if (typeof cloudPushProject === 'function') {
+            cloudPushProject(project).catch(() => {});
+        }
+        return;
+    }
+
+    try {
+        await window.storage.set(`project:${project.id}`, JSON.stringify(project));
+    } catch (error) {
+        // Fallback to localStorage if cloud storage fails
+        console.log('Cloud storage failed, saving to localStorage');
+        try {
+            localStorage.setItem('listk_projects', JSON.stringify(projects));
+        } catch (e) {
+            console.error('All storage backends failed:', e);
+            throw e;
+        }
+    }
+}
+
+/**
+ * Delete a project from storage.
+ * Removes from both in-memory array and persistent storage.
+ * 
+ * @param {string} projectId - ID of the project to delete
+ */
+async function deleteProjectFromStorage(projectId) {
+    if (!window.storage) {
+        projects = projects.filter(p => p.id !== projectId);
+        localStorage.setItem('listk_projects', JSON.stringify(projects));
+        return;
+    }
+
+    try {
+        await window.storage.delete(`project:${projectId}`);
+    } catch (error) {
+        projects = projects.filter(p => p.id !== projectId);
+        localStorage.setItem('listk_projects', JSON.stringify(projects));
+    }
+}
+
+/**
+ * Load all archives from storage.
+ * Archives are projects that have been shelved with an expiration date.
+ */
+async function loadArchives() {
+    if (!window.storage) {
+        // Migration: rename old vrd_archives key
+        const oldArchives = localStorage.getItem('vrd_archives');
+        if (oldArchives && !localStorage.getItem('listk_archives')) {
+            localStorage.setItem('listk_archives', oldArchives);
+            localStorage.removeItem('vrd_archives');
+            console.log('📦 Migrated vrd_archives → listk_archives');
+        }
+        archives = JSON.parse(localStorage.getItem('listk_archives') || '[]');
+    } else {
+        try {
+            const result = await window.storage.list('archive:');
+            if (result && result.keys) {
+                archives = [];
+                for (const key of result.keys) {
+                    const data = await window.storage.get(key);
+                    if (data) {
+                        archives.push(JSON.parse(data.value));
+                    }
+                }
+            }
+        } catch (error) {
+            archives = JSON.parse(localStorage.getItem('listk_archives') || '[]');
+        }
+    }
+    // Update UI badge if the function is available
+    // (may not be loaded yet during initial startup - app.js handles that case)
+    if (typeof updateArchiveCount === 'function') updateArchiveCount();
+}
+
+/**
+ * Save an archive entry.
+ * 
+ * @param {Object} archiveData - Project data with archive metadata (archivedAt, deleteAfter)
+ */
+async function saveArchive(archiveData) {
+    if (!window.storage) {
+        const allArchives = JSON.parse(localStorage.getItem('listk_archives') || '[]');
+        allArchives.push(archiveData);
+        localStorage.setItem('listk_archives', JSON.stringify(allArchives));
+    } else {
+        try {
+            await window.storage.set(`archive:${archiveData.id}`, JSON.stringify(archiveData));
+        } catch (error) {
+            const allArchives = JSON.parse(localStorage.getItem('listk_archives') || '[]');
+            allArchives.push(archiveData);
+            localStorage.setItem('listk_archives', JSON.stringify(allArchives));
+        }
+    }
+}
+
+/**
+ * Delete an archive entry.
+ * 
+ * @param {string} archiveId - ID of the archive to delete
+ */
+async function deleteArchiveFromStorage(archiveId) {
+    if (!window.storage) {
+        archives = archives.filter(a => a.id !== archiveId);
+        localStorage.setItem('listk_archives', JSON.stringify(archives));
+    } else {
+        try {
+            await window.storage.delete(`archive:${archiveId}`);
+        } catch (error) {
+            archives = archives.filter(a => a.id !== archiveId);
+            localStorage.setItem('listk_archives', JSON.stringify(archives));
+        }
+    }
+}
+
+/**
+ * Remove archives that have passed their expiration date.
+ * Called on app startup to keep storage clean.
+ */
+async function cleanExpiredArchives() {
+    const now = new Date();
+    const expiredArchives = archives.filter(a => new Date(a.deleteAfter) < now);
+
+    for (const archive of expiredArchives) {
+        await deleteArchiveFromStorage(archive.id);
+    }
+
+    if (expiredArchives.length > 0) {
+        await loadArchives();
+        console.log(`${expiredArchives.length} expired archives cleaned`);
+    }
+}
+
+    </script>
+    <script src="js/storage/cloud.js"></script>
+    <script>
+    // === js/map/map.js ===
+/**
+ * ListKontrol - Map Module
+ * ========================
+ * 
+ * Handles Leaflet map initialization, tile layers, and marker management.
+ * 
+ * Map layers:
+ * - OpenStreetMap: Default street map, good for address identification
+ * - Esri Satellite: Aerial imagery, useful for terrain/construction context
+ * 
+ * Marker design:
+ * - Numbered circles with status-based colors (yellow/blue/green)
+ * - "Travaux ici" label uses high z-index to always appear on top
+ * - Temporary pulse marker for new point placement
+ * 
+ * The screenshoter plugin (leaflet-simple-map-screenshoter) is initialized
+ * here for fast report capture. It renders the map to canvas directly,
+ * which is 4-5x faster than html2canvas.
+ */
+
+/**
+ * Initialize the Leaflet map with layers and controls.
+ * Called once on app startup from initApp().
+ * 
+ * Default view: Paris (48.8566, 2.3522) at zoom 13.
+ * This is overridden when a project with points is selected.
+ */
+function initMap() {
+    map = L.map('map', {
+        maxZoom: 19  // Level 19 is the highest with reliable tile coverage
+    }).setView([48.8566, 2.3522], 13);
+
+    // OpenStreetMap: Standard street map layer
+    const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors',
+        maxZoom: 19
+    });
+
+    // Esri World Imagery: Satellite/aerial photography
+    // Chosen over Google Maps tiles because: free, no API key, reliable, global coverage
+    const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: '© Esri, Maxar, Earthstar Geographics',
+        maxZoom: 19
+    });
+
+    // Add default layer
+    osmLayer.addTo(map);
+
+    // Layer switcher control (top-right corner)
+    const baseLayers = {
+        "🗺️ Carte standard": osmLayer,
+        "🛰️ Satellite": satelliteLayer
+    };
+    L.control.layers(baseLayers, null, { position: 'topright' }).addTo(map);
+
+    // Store layers globally for report capture (capture.js needs to switch layers)
+    window.mapLayers = {
+        standard: osmLayer,
+        satellite: satelliteLayer
+    };
+
+    // Initialize screenshoter for fast report generation
+    // This renders the map canvas directly, much faster than html2canvas
+    try {
+        const screenshoter = L.simpleMapScreenshoter({
+            hidden: true  // Don't show the screenshot button on the map
+        }).addTo(map);
+        console.log('✅ Map screenshoter initialized');
+        window.mapScreenshoter = screenshoter;
+    } catch (e) {
+        console.warn('⚠️ Screenshoter unavailable, html2canvas fallback will be used');
+        window.mapScreenshoter = null;
+    }
+
+    // Click handler: Place a new point where the user clicks
+    map.on('click', function(e) {
+        if (currentProject) {
+            currentLatLng = e.latlng;
+
+            // Remove previous temporary marker
+            if (currentMarker) {
+                map.removeLayer(currentMarker);
+            }
+
+            // Temporary pulsing marker to show where the point will be placed
+            // High z-index (10000) ensures it's visible above existing points
+            const icon = L.divIcon({
+                className: 'custom-marker',
+                html: `<div style="background: #f59e0b; width: 32px; height: 32px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.3); animation: pulse 1s infinite;"></div>`,
+                iconSize: [32, 32],
+                iconAnchor: [16, 16]
+            });
+
+            currentMarker = L.marker([e.latlng.lat, e.latlng.lng], {
+                icon: icon,
+                zIndexOffset: 10000
+            }).addTo(map);
+
+            // Reverse geocode to get street address
+            getAddressFromLatLng(e.latlng.lat, e.latlng.lng);
+            showNewPointModal();
+        } else {
+            alert('Veuillez d\'abord sélectionner un projet');
+        }
+    });
+}
+
+/**
+ * Render all markers for the current project on the map.
+ * Clears existing markers and recreates them with current status colors.
+ * 
+ * Marker colors by status:
+ * - todo (yellow #f59e0b): Work not started
+ * - progress (blue #3b82f6): Work in progress
+ * - done (green #10b981): Work completed
+ */
+function renderMapMarkers() {
+    // Clear all existing markers
+    markers.forEach(marker => map.removeLayer(marker));
+    markers = [];
+
+    if (!currentProject) return;
+
+    currentProject.points.forEach(point => {
+        const color = point.status === 'done' ? '#10b981' :
+                     point.status === 'progress' ? '#3b82f6' : '#f59e0b';
+
+        // Numbered circle marker with status color
+        const icon = L.divIcon({
+            className: 'custom-marker',
+            html: `
+                <div style="
+                    background: ${color}; 
+                    color: white;
+                    width: 36px; 
+                    height: 36px; 
+                    border-radius: 50%; 
+                    border: 3px solid white; 
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-weight: bold;
+                    font-size: 16px;
+                ">${point.number || '?'}</div>
+            `,
+            iconSize: [36, 36],
+            iconAnchor: [18, 18]
+        });
+
+        const marker = L.marker([point.lat, point.lng], { icon })
+            .addTo(map)
+            .bindPopup(createPopupContent(point), {
+                className: 'custom-popup',
+                maxWidth: 240
+            });
+
+        marker.pointId = point.id;
+        marker.on('click', () => selectPointOnMap(point.id));
+        markers.push(marker);
+    });
+}
+
+/**
+ * Generate HTML content for a point's map popup.
+ * Shows status badge, title, comment preview, photo thumbnail, and edit button.
+ * 
+ * @param {Object} point - The point data object
+ * @returns {string} HTML string for Leaflet popup
+ */
+function createPopupContent(point) {
+    const statusBadge = point.status === 'done' ? 'badge-done' :
+                       point.status === 'progress' ? 'badge-progress' : 'badge-todo';
+    const statusText = point.status === 'done' ? 'Terminé' :
+                      point.status === 'progress' ? 'En cours' : 'À faire';
+
+    // Support both legacy single photo and new multi-photo format
+    const firstPhoto = point.photos ? point.photos[0] : point.photo;
+
+    return `
+        <div class="popup-content">
+            <div class="popup-status">
+                <span class="badge ${statusBadge}">${statusText}</span>
+            </div>
+            <strong>${point.title}</strong>
+            <div class="popup-comment">${point.comment}</div>
+            ${firstPhoto ? `<img src="${firstPhoto}" class="popup-image">` : ''}
+            <button class="btn btn-secondary btn-sm" onclick="editPointModal('${point.id}')" style="width: 100%;">
+                ✏️ Modifier
+            </button>
+        </div>
+    `;
+}
+
+/**
+ * Highlight a point in the points panel when its marker is clicked.
+ * Scrolls the panel to show the selected point.
+ * 
+ * @param {string} pointId - ID of the point to highlight
+ */
+function selectPointOnMap(pointId) {
+    document.querySelectorAll('.point-item').forEach(item => {
+        item.classList.remove('selected');
+    });
+
+    const pointElement = document.querySelector(`[data-point-id="${pointId}"]`);
+    if (pointElement) {
+        pointElement.classList.add('selected');
+        pointElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+}
+
+/**
+ * Clear all markers from the map.
+ * Used when deselecting a project or deleting the current project.
+ */
+function clearMap() {
+    markers.forEach(marker => map.removeLayer(marker));
+    markers = [];
+}
+
+/**
+ * Reverse geocode coordinates to a street address.
+ * Uses Nominatim (OpenStreetMap's geocoding service).
+ * 
+ * Why Nominatim: Free, no API key, no usage limits for low-volume use.
+ * Falls back to raw coordinates if the service is unavailable.
+ * 
+ * @param {number} lat - Latitude
+ * @param {number} lng - Longitude
+ */
+async function getAddressFromLatLng(lat, lng) {
+    try {
+        const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+        const data = await response.json();
+        document.getElementById('pointAddress').value = data.display_name || `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+    } catch (error) {
+        document.getElementById('pointAddress').value = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+    }
+}
+
+    </script>
+    <script>
+    // === js/map/capture.js ===
+/**
+ * ListKontrol - Map Capture Module
+ * =================================
+ * 
+ * Handles map screenshot capture for HTML report generation.
+ * Two capture methods are supported:
+ * 
+ * 1. leaflet-simple-map-screenshoter (preferred):
+ *    - Renders the Leaflet canvas directly to an image
+ *    - ~4-5x faster than html2canvas
+ *    - Requires the screenshoter plugin to be loaded
+ * 
+ * 2. html2canvas (fallback):
+ *    - Captures the DOM element as a screenshot
+ *    - Slower but works everywhere
+ *    - May miss some tile layers due to CORS restrictions
+ * 
+ * Critical safety: All async operations use withTimeout() to prevent
+ * infinite hangs. If a capture fails, it returns null instead of blocking
+ * the entire report generation. The finally block always restores the
+ * map state (center, zoom, layers) even on error.
+ */
+
+/**
+ * Capture a zoomed-in map screenshot centered on a specific point.
+ * Used for individual point detail views in the HTML report.
+ * 
+ * Process:
+ * 1. Save current map state (center, zoom, layers)
+ * 2. Switch to the requested tile layer (standard/satellite)
+ * 3. Center on the point at high zoom (19)
+ * 4. Add a "TRAVAUX ICI" marker
+ * 5. Capture screenshot
+ * 6. Restore original map state
+ * 
+ * @param {Object} point - Point object with lat, lng, title
+ * @param {string} layerType - 'standard' or 'satellite'
+ * @param {number} zoomLevel - Zoom level for capture (default: 19)
+ * @returns {Promise<string|null>} Base64 JPEG data URL, or null on failure
+ */
+async function captureMapForPoint(point, layerType = 'standard', zoomLevel = 19) {
+    console.log(`➡️ Starting capture for point: ${point.title}`);
+
+    // Save original state for restoration in finally block
+    const originalCenter = map.getCenter();
+    const originalZoom = map.getZoom();
+
+    // Store and remove current tile layers
+    const savedLayers = [];
+    map.eachLayer(layer => {
+        if (layer instanceof L.TileLayer) {
+            savedLayers.push(layer);
+        }
+    });
+    savedLayers.forEach(layer => map.removeLayer(layer));
+
+    // Add the requested capture layer
+    const captureLayer = window.mapLayers[layerType];
+    captureLayer.addTo(map);
+
+    // Center on point with no animation (faster for batch capture)
+    map.setView([point.lat, point.lng], zoomLevel, { animate: false });
+    map.invalidateSize();
+
+    // Wait for tiles to fully load before capturing
+    // 800ms was too short and caused grey/missing tiles (field-tested)
+    await new Promise(resolve => {
+        let resolved = false;
+        const done = () => { if (!resolved) { resolved = true; resolve(); } };
+        
+        // Primary: listen for the 'load' event on the tile layer
+        captureLayer.once('load', () => setTimeout(done, 300));
+        
+        // Safety timeout: proceed after 3s even if tiles didn't fully load
+        setTimeout(done, 3000);
+    });
+
+    // Create the "TRAVAUX ICI" marker
+    // High z-index ensures it renders above all map elements
+    const captureIcon = L.divIcon({
+        className: 'capture-marker',
+        html: `
+            <div style="position:relative;z-index:10000;">
+                <div style="background:#f97316;width:50px;height:50px;border-radius:50%;border:5px solid white;box-shadow:0 6px 16px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;font-size:28px;">📍</div>
+                <div style="position:absolute;bottom:-30px;left:50%;transform:translateX(-50%);background:#f97316;color:white;padding:6px 12px;border-radius:6px;font-weight:bold;font-size:14px;box-shadow:0 3px 10px rgba(0,0,0,.4);border:2px solid white;z-index:10001;">🎯 TRAVAUX ICI</div>
+            </div>
+        `,
+        iconSize: [50, 50],
+        iconAnchor: [25, 25]
+    });
+
+    let captureMarker = null;
+    let imageData = null;
+
+    try {
+        captureMarker = L.marker([point.lat, point.lng], {
+            icon: captureIcon,
+            zIndexOffset: 10000
+        }).addTo(map);
+
+        // Brief delay for marker to render in the DOM
+        await new Promise(resolve => setTimeout(resolve, 200));
+
+        // Attempt fast capture with screenshoter plugin
+        if (window.mapScreenshoter) {
+            try {
+                console.log('📸 Fast capture with screenshoter');
+
+                const screenshot = await withTimeout(
+                    window.mapScreenshoter.takeScreen('image', { caption: null }),
+                    6000,
+                    'screenshoter.takeScreen'
+                );
+
+                const img = await loadImage(screenshot, 4000);
+
+                // Convert to JPEG for smaller file size
+                const canvas = document.createElement('canvas');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+
+                imageData = canvas.toDataURL('image/jpeg', 0.85);
+                console.log('✅ Captured (screenshoter):', point.title);
+
+            } catch (err) {
+                console.warn('⚠️ Screenshoter failed, falling back to html2canvas:', err.message);
+                // Fall through to html2canvas fallback below
+                imageData = await captureWithHtml2canvas();
+            }
+        } else {
+            // No screenshoter available, use html2canvas directly
+            imageData = await captureWithHtml2canvas();
+        }
+
+    } catch (error) {
+        console.error('❌ Capture error for', point.title, ':', error.message);
+        imageData = null;  // Return null instead of hanging
+
+    } finally {
+        // CRITICAL: Always clean up, even on error
+        // Without this, the map would be stuck on the wrong view
+        if (captureMarker) {
+            try { map.removeLayer(captureMarker); } catch (e) {}
+        }
+
+        try { map.removeLayer(captureLayer); } catch (e) {}
+
+        savedLayers.forEach(layer => {
+            try { layer.addTo(map); } catch (e) {}
+        });
+
+        map.setView(originalCenter, originalZoom, { animate: false });
+    }
+
+    return imageData;
+}
+
+/**
+ * Fallback capture method using html2canvas.
+ * Slower but more compatible. Used when screenshoter plugin fails.
+ * 
+ * @returns {Promise<string|null>} Base64 JPEG data URL
+ */
+async function captureWithHtml2canvas() {
+    try {
+        console.log('📸 Capture with html2canvas fallback');
+        const mapElement = document.getElementById('map');
+        const canvas = await withTimeout(
+            html2canvas(mapElement, {
+                useCORS: true,
+                allowTaint: true,
+                backgroundColor: '#f0f0f0',
+                scale: 2,      // 2x for retina quality
+                logging: false  // Suppress verbose html2canvas logs
+            }),
+            12000,
+            'html2canvas'
+        );
+
+        return canvas.toDataURL('image/jpeg', 0.90);
+    } catch (err) {
+        console.error('❌ html2canvas failed:', err.message);
+        return null;
+    }
+}
+
+/**
+ * Capture an overview map showing all project points.
+ * Uses fitBounds to auto-zoom to include all points with padding.
+ * The existing numbered markers from renderMapMarkers() are captured as-is.
+ * 
+ * @param {Array} points - Array of point objects with lat, lng
+ * @param {string} layerType - 'standard' or 'satellite'
+ * @returns {Promise<string|null>} Base64 JPEG data URL
+ */
+async function captureOverviewMap(points, layerType = 'standard') {
+    return new Promise((resolve) => {
+        const originalCenter = map.getCenter();
+        const originalZoom = map.getZoom();
+
+        // Swap to requested tile layer
+        const currentLayers = [];
+        map.eachLayer(layer => {
+            if (layer instanceof L.TileLayer) {
+                currentLayers.push(layer);
+            }
+        });
+        currentLayers.forEach(layer => map.removeLayer(layer));
+
+        const chosenLayer = window.mapLayers[layerType];
+        if (chosenLayer) chosenLayer.addTo(map);
+
+        // Fit map to show all points with padding
+        const bounds = L.latLngBounds(points.map(p => [p.lat, p.lng]));
+        map.fitBounds(bounds, { padding: [50, 50] });
+        map.invalidateSize();
+
+        // Wait for tiles to fully load using the 'load' event
+        // The 'load' event fires when all visible tiles have finished loading
+        let captured = false;
+
+        const doCapture = async () => {
+            if (captured) return;
+            captured = true;
+
+            // Extra buffer after tiles report loaded
+            await new Promise(r => setTimeout(r, 500));
+
+            try {
+                const mapElement = document.getElementById('map');
+                const canvas = await html2canvas(mapElement, {
+                    useCORS: true,
+                    allowTaint: true,
+                    backgroundColor: '#f0f0f0',
+                    scale: 2,
+                    logging: false
+                });
+
+                const imageData = canvas.toDataURL('image/jpeg', 0.90);
+                console.log('Overview map captured');
+
+                // Restore
+                if (chosenLayer) try { map.removeLayer(chosenLayer); } catch (e) {}
+                currentLayers.forEach(layer => { try { layer.addTo(map); } catch (e) {} });
+                map.setView(originalCenter, originalZoom, { animate: false });
+
+                resolve(imageData);
+            } catch (error) {
+                console.error('Overview capture error:', error);
+                if (chosenLayer) try { map.removeLayer(chosenLayer); } catch (e) {}
+                currentLayers.forEach(layer => { try { layer.addTo(map); } catch (e) {} });
+                map.setView(originalCenter, originalZoom, { animate: false });
+                resolve(null);
+            }
+        };
+
+        // Listen for tile load completion
+        if (chosenLayer) {
+            chosenLayer.on('load', doCapture);
+        }
+
+        // Safety timeout: capture anyway after 5 seconds
+        setTimeout(doCapture, 5000);
+    });
+}
+
+/**
+ * Sort points by geographic proximity using nearest-neighbor algorithm.
+ * Used to optimize capture order, reducing map pan distance between points.
+ * 
+ * Algorithm: Greedy nearest-neighbor starting from the first point.
+ * Not optimal (that would be TSP), but good enough and O(n²).
+ * 
+ * @param {Array} points - Array of point objects with lat, lng
+ * @returns {Array} Points sorted by proximity
+ */
+function sortPointsByProximity(points) {
+    if (points.length <= 1) return points;
+
+    const sorted = [];
+    const remaining = [...points];
+
+    sorted.push(remaining.shift());
+
+    while (remaining.length > 0) {
+        const lastPoint = sorted[sorted.length - 1];
+        let closestIndex = 0;
+        let minDistance = Infinity;
+
+        for (let i = 0; i < remaining.length; i++) {
+            // Euclidean distance on lat/lng - adequate for nearby points
+            const distance = Math.sqrt(
+                Math.pow(remaining[i].lat - lastPoint.lat, 2) +
+                Math.pow(remaining[i].lng - lastPoint.lng, 2)
+            );
+
+            if (distance < minDistance) {
+                minDistance = distance;
+                closestIndex = i;
+            }
+        }
+
+        sorted.push(remaining.splice(closestIndex, 1)[0]);
+    }
+
+    sorted.forEach((point, index) => {
+        point.sortedNumber = index + 1;
+    });
+
+    return sorted;
+}
+
+    </script>
+    <script>
+    // === js/ui/modals.js ===
+/**
+ * ListKontrol - Modal Management
+ * ==============================
+ * 
+ * Centralized modal dialog open/close logic.
+ * Modals use CSS class toggling (.active) rather than display property
+ * to enable CSS transitions (fadeIn, slideUp).
+ * 
+ * Special behavior: Closing the new point modal also cleans up
+ * the temporary map marker, preventing orphaned markers.
+ */
+
+/**
+ * Close a modal dialog by its ID.
+ * Also handles cleanup for specific modals (e.g., removing temp markers).
+ * 
+ * @param {string} modalId - The DOM id of the modal to close
+ */
+function closeModal(modalId) {
+    document.getElementById(modalId).classList.remove('active');
+
+    // Clean up temporary marker when cancelling new point creation
+    // Without this, a yellow pulsing marker would remain on the map
+    if (modalId === 'newPointModal' && currentMarker) {
+        map.removeLayer(currentMarker);
+        currentMarker = null;
+        currentLatLng = null;
+    }
+}
+
+/**
+ * Show the new project creation modal.
+ */
+function showNewProjectModal() {
+    document.getElementById('newProjectModal').classList.add('active');
+}
+
+/**
+ * Show the new point creation modal.
+ * Called after the user clicks on the map to place a point.
+ */
+function showNewPointModal() {
+    document.getElementById('newPointModal').classList.add('active');
+}
+
+/**
+ * Show the archives list modal.
+ * Renders the current archives before displaying.
+ */
+function showArchivesModal() {
+    renderArchivesList();
+    document.getElementById('archivesModal').classList.add('active');
+}
+
+/**
+ * Show the sync import modal.
+ * Used to import changes from interactive reports back into the app.
+ */
+function showSyncImportModal() {
+    document.getElementById('syncImportModal').classList.add('active');
+}
+
+    </script>
+    <script>
+    // === js/ui/projects.js ===
+/**
+ * ListKontrol - Project Management UI
+ * ====================================
+ * 
+ * Handles project CRUD operations and sidebar rendering.
+ * Projects are the top-level container: each project has a name,
+ * description, and an array of points.
+ * 
+ * Deletion uses two-step confirmation (confirm + type project name)
+ * to prevent accidental data loss - localStorage deletion is permanent.
+ */
+
+/**
+ * Create a new project from modal form data.
+ * Uses Date.now() as unique ID (sufficient for single-user app).
+ */
+async function createProject() {
+    const name = document.getElementById('projectName').value.trim();
+    const description = document.getElementById('projectDescription').value.trim();
+
+    if (!name) {
+        alert('Veuillez saisir un nom de projet');
+        return;
+    }
+
+    const project = {
+        id: Date.now().toString(),
+        name: name,
+        description: description,
+        createdAt: new Date().toISOString(),
+        points: []
+    };
+
+    projects.push(project);
+
+    try {
+        await saveProject(project);
+    } catch (error) {
+        console.error('Project save failed:', error);
+        projects.pop();
+        alert('Erreur lors de la creation: ' + error.message);
+        return;
+    }
+
+    closeModal('newProjectModal');
+    document.getElementById('projectName').value = '';
+    document.getElementById('projectDescription').value = '';
+    renderProjects();
+    selectProject(project.id);
+}
+
+/**
+ * Render the project list in the sidebar.
+ * Each card shows name, point count, completion stats, and delete button.
+ * Delete button uses addEventListener (not inline onclick) so
+ * stopPropagation works correctly to prevent card selection.
+ */
+function renderProjects() {
+    const projectList = document.getElementById('projectList');
+    projectList.innerHTML = '';
+
+    if (projects.length === 0) {
+        projectList.innerHTML = '<p style="padding: 20px; text-align: center; color: var(--text-muted);">Aucun projet. Creez-en un !</p>';
+        return;
+    }
+
+    projects.forEach(project => {
+        const stats = getProjectStats(project);
+        const card = document.createElement('div');
+        card.className = 'project-card' + (currentProject && currentProject.id === project.id ? ' active' : '');
+        card.onclick = function() { selectProject(project.id); };
+
+        card.innerHTML =
+            '<div class="project-name">' + project.name + '</div>' +
+            '<div class="project-meta">' +
+            '  <span>📍 ' + project.points.length + ' pts</span>' +
+            '  <span>✅ ' + stats.done + '/' + project.points.length + '</span>' +
+            '</div>' +
+            '<button class="btn-icon btn-delete-project" data-project-id="' + project.id + '" title="Supprimer projet">🗑️</button>';
+
+        var deleteBtn = card.querySelector('.btn-delete-project');
+        deleteBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            deleteProjectConfirm(project.id);
+        });
+
+        projectList.appendChild(card);
+    });
+}
+
+/**
+ * Calculate completion statistics for a project.
+ * @param {Object} project - Project with points array
+ * @returns {Object} {todo, progress, done} counts
+ */
+function getProjectStats(project) {
+    var stats = { todo: 0, progress: 0, done: 0 };
+    project.points.forEach(function(point) { stats[point.status]++; });
+    return stats;
+}
+
+/**
+ * Select a project and display its points on the map.
+ * @param {string} projectId - ID of the project to select
+ */
+function selectProject(projectId) {
+    currentProject = projects.find(function(p) { return p.id === projectId; });
+    if (!currentProject) return;
+
+    document.getElementById('currentProjectName').textContent = currentProject.name;
+    document.getElementById('projectTools').style.display = 'flex';
+
+    renderProjects();
+    renderMapMarkers();
+    updatePointsCount();
+
+    // Auto-close sidebar on mobile
+    if (window.innerWidth <= 768) {
+        document.querySelector('.sidebar').classList.remove('mobile-open');
+    }
+
+    // Center map on all points using fitBounds
+    if (currentProject.points.length > 0) {
+        var bounds = L.latLngBounds(currentProject.points.map(function(p) { return [p.lat, p.lng]; }));
+        map.fitBounds(bounds, { padding: [50, 50], maxZoom: 18 });
+    }
+}
+
+/**
+ * Delete a project with two-step confirmation.
+ * Step 1: confirm() with project info
+ * Step 2: prompt() requiring user to type project name
+ * @param {string} projectId - ID of the project to delete
+ */
+async function deleteProjectConfirm(projectId) {
+    var project = projects.find(function(p) { return p.id === projectId; });
+    if (!project) return;
+
+    if (!confirm(
+        'SUPPRIMER DEFINITIVEMENT LE PROJET ?\n\n' +
+        'Projet : ' + project.name + '\n' +
+        'Points : ' + project.points.length + '\n\n' +
+        'Cette action est IRREVERSIBLE !'
+    )) return;
+
+    var finalConfirm = prompt('Pour confirmer, tapez le nom du projet :\n"' + project.name + '"');
+    if (finalConfirm !== project.name) {
+        alert('Nom incorrect. Suppression annulee.');
+        return;
+    }
+
+    await deleteProjectFromStorage(project.id);
+    projects = projects.filter(function(p) { return p.id !== project.id; });
+
+    if (currentProject && currentProject.id === project.id) {
+        currentProject = null;
+        document.getElementById('currentProjectName').textContent = 'Selectionnez un projet';
+        document.getElementById('projectTools').style.display = 'none';
+        clearMap();
+    }
+
+    renderProjects();
+    hidePointsPanel();
+    alert('Projet supprime avec succes');
+}
+
+/**
+ * Delete the currently selected project (toolbar button).
+ */
+async function deleteCurrentProject() {
+    if (!currentProject) return;
+
+    if (!confirm(
+        'SUPPRIMER DEFINITIVEMENT LE PROJET ?\n\n' +
+        'Projet : ' + currentProject.name + '\n' +
+        'Points : ' + currentProject.points.length + '\n\n' +
+        'Cette action est IRREVERSIBLE !'
+    )) return;
+
+    var finalConfirm = prompt('Pour confirmer, tapez le nom du projet :\n"' + currentProject.name + '"');
+    if (finalConfirm !== currentProject.name) {
+        alert('Nom incorrect. Suppression annulee.');
+        return;
+    }
+
+    await deleteProjectFromStorage(currentProject.id);
+    projects = projects.filter(function(p) { return p.id !== currentProject.id; });
+
+    currentProject = null;
+    document.getElementById('currentProjectName').textContent = 'Selectionnez un projet';
+    document.getElementById('projectTools').style.display = 'none';
+
+    clearMap();
+    renderProjects();
+    hidePointsPanel();
+    alert('Projet supprime definitivement');
+}
+
+/**
+ * Open the archive modal for the current project.
+ */
+function archiveProject() {
+    if (!currentProject) return;
+    document.getElementById('archiveProjectName').textContent = currentProject.name;
+    document.getElementById('archiveModal').classList.add('active');
+}
+
+/**
+ * Confirm archiving: move project to archives with expiration date.
+ */
+async function confirmArchive() {
+    var duration = parseInt(document.getElementById('archiveDuration').value);
+
+    var archiveData = Object.assign({}, currentProject, {
+        archivedAt: new Date().toISOString(),
+        deleteAfter: new Date(Date.now() + duration * 30 * 24 * 60 * 60 * 1000).toISOString()
+    });
+
+    await saveArchive(archiveData);
+    await deleteProjectFromStorage(currentProject.id);
+    projects = projects.filter(function(p) { return p.id !== currentProject.id; });
+
+    currentProject = null;
+    document.getElementById('currentProjectName').textContent = 'Selectionnez un projet';
+    document.getElementById('projectTools').style.display = 'none';
+    clearMap();
+
+    closeModal('archiveModal');
+    renderProjects();
+    hidePointsPanel();
+
+    alert('Projet archive pour ' + duration + ' mois');
+    await loadArchives();
+}
+
+/**
+ * Update the project stats in the sidebar after point changes.
+ */
+function updateProjectStats() {
+    if (!currentProject) return;
+    renderProjects();
+    var pointsCount = document.getElementById('pointsCount');
+    if (pointsCount) {
+        pointsCount.textContent = currentProject.points.length;
+    }
+}
+
+    </script>
+    <script>
+    // === js/ui/archives.js ===
+/**
+ * Update the archive count badge in the sidebar.
+ */
+function updateArchiveCount() {
+    document.getElementById('archiveCount').textContent = archives.length;
+}
+
+/**
+ * Render the archives list inside the archives modal.
+ * Shows archive date, expiration countdown, and restore/delete buttons.
+ */
+function renderArchivesList() {
+    const archivesList = document.getElementById('archivesList');
+
+    if (archives.length === 0) {
+        archivesList.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 40px;">Aucune archive</p>';
+        return;
+    }
+
+    archivesList.innerHTML = archives.map(archive => {
+        const archivedDate = new Date(archive.archivedAt).toLocaleDateString('fr-FR');
+        const deleteDate = new Date(archive.deleteAfter).toLocaleDateString('fr-FR');
+        const daysLeft = Math.ceil((new Date(archive.deleteAfter) - new Date()) / (1000 * 60 * 60 * 24));
+
+        return `
+            <div style="background: var(--bg); border: 2px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 12px;">
+                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
+                    <div>
+                        <div style="font-weight: 600; font-size: 15px; margin-bottom: 4px;">${archive.name}</div>
+                        <div style="font-size: 12px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace;">
+                            📅 Archivé le ${archivedDate}<br>
+                            🗑️ Suppression le ${deleteDate} (dans ${daysLeft} jours)<br>
+                            📍 ${archive.points.length} points
+                        </div>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button class="btn btn-success btn-sm" onclick="restoreArchive('${archive.id}')">
+                        ↩️ Restaurer
+                    </button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteArchive('${archive.id}')">
+                        🗑️ Supprimer
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+/**
+ * Restore an archive back to active projects.
+ * Removes archive metadata and saves as a regular project.
+ * 
+ * @param {string} archiveId - ID of the archive to restore
+ */
+async function restoreArchive(archiveId) {
+    const archive = archives.find(a => a.id === archiveId);
+    if (!archive) return;
+
+    if (!confirm(`Restaurer le projet "${archive.name}" dans les projets actifs ?`)) {
+        return;
+    }
+
+    // Remove archive-specific metadata
+    delete archive.archivedAt;
+    delete archive.deleteAfter;
+
+    projects.push(archive);
+    await saveProject(archive);
+    await deleteArchiveFromStorage(archiveId);
+
+    await loadArchives();
+    renderProjects();
+    closeModal('archivesModal');
+    alert('✅ Projet restauré avec succès !');
+}
+
+/**
+ * Permanently delete an archive.
+ * 
+ * @param {string} archiveId - ID of the archive to delete
+ */
+async function deleteArchive(archiveId) {
+    const archive = archives.find(a => a.id === archiveId);
+    if (!archive) return;
+
+    if (!confirm(`Supprimer définitivement l'archive "${archive.name}" ?\nCette action est irréversible.`)) {
+        return;
+    }
+
+    await deleteArchiveFromStorage(archiveId);
+    await loadArchives();
+    renderArchivesList();
+    alert('🗑️ Archive supprimée définitivement');
+}
+
+
+
+    </script>
+    <script>
+    // === js/ui/points.js ===
+/**
+ * ListKontrol - Point Management UI
+ * ==================================
+ * 
+ * Handles point CRUD operations, multi-photo support, and status tracking.
+ * 
+ * Data model for a point:
+ * {
+ *   id: string,           // Unique ID (Date.now())
+ *   number: number,       // Sequential display number
+ *   title: string,        // Short description
+ *   comment: string,      // Detailed work description
+ *   status: 'todo'|'progress'|'done',
+ *   statusHistory: [{status, date, user, previousStatus}],
+ *   address: string,      // Reverse-geocoded address
+ *   lat: number,          // GPS latitude
+ *   lng: number,          // GPS longitude
+ *   photos: string[],     // Array of base64 data URLs (NEW in 0.6.0)
+ *   photo: string|null,   // Legacy single photo (backward compatible)
+ *   createdAt: string     // ISO date
+ * }
+ * 
+ * Multi-photo support (NEW in 0.6.0):
+ * - Points now store photos in a `photos` array instead of single `photo`
+ * - Legacy points with `photo` are automatically migrated on read
+ * - Photos are compressed to 1200px max width, 70% JPEG quality
+ * - Grid preview in the modal shows all photos with remove buttons
+ */
+
+// Temporary storage for photos being added in the current modal session
+let pendingPhotos = [];
+let editPendingPhotos = [];
+
+/**
+ * Show the points panel (floating side panel).
+ */
+function showPointsPanel() {
+    document.getElementById('pointsPanel').classList.add('active');
+    renderPointsList();
+}
+
+/**
+ * Hide the points panel.
+ */
+function hidePointsPanel() {
+    document.getElementById('pointsPanel').classList.remove('active');
+}
+
+/**
+ * Update the points count badge in the toolbar.
+ */
+function updatePointsCount() {
+    if (currentProject) {
+        document.getElementById('pointsCount').textContent = currentProject.points.length;
+    }
+}
+
+/**
+ * Render the points list in the floating panel.
+ * Each point shows title, address, comment preview, status badge,
+ * and quick-toggle status buttons.
+ */
+function renderPointsList() {
+    const pointsList = document.getElementById('pointsList');
+    pointsList.innerHTML = '';
+
+    if (!currentProject || currentProject.points.length === 0) {
+        pointsList.innerHTML = '<p style="padding: 20px; text-align: center; color: var(--text-muted);">Aucun point sur ce projet</p>';
+        return;
+    }
+
+    currentProject.points.forEach(point => {
+        const statusBadge = point.status === 'done' ? 'badge-done' :
+                           point.status === 'progress' ? 'badge-progress' : 'badge-todo';
+        const statusText = point.status === 'done' ? 'Terminé' :
+                          point.status === 'progress' ? 'En cours' : 'À faire';
+
+        const item = document.createElement('div');
+        item.className = 'point-item';
+        item.setAttribute('data-point-id', point.id);
+        item.onclick = () => {
+            map.setView([point.lat, point.lng], 18);
+            markers.find(m => m.pointId === point.id)?.openPopup();
+        };
+
+        item.innerHTML = `
+            <div class="point-header">
+                <div class="point-title">${point.title}</div>
+                <span class="badge ${statusBadge}">${statusText}</span>
+            </div>
+            <div class="point-address">${point.address}</div>
+            <div class="point-comment">${point.comment.substring(0, 100)}${point.comment.length > 100 ? '...' : ''}</div>
+            <div class="point-actions">
+                <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); editPointModal('${point.id}')">
+                    ✏️ Modifier
+                </button>
+                <div class="status-selector">
+                    <button 
+                        class="btn-status ${point.status === 'todo' ? 'active status-todo' : 'status-todo'}" 
+                        onclick="event.stopPropagation(); setPointStatus('${point.id}', 'todo')"
+                        title="À faire">
+                        ⏸️
+                    </button>
+                    <button 
+                        class="btn-status ${point.status === 'progress' ? 'active status-progress' : 'status-progress'}" 
+                        onclick="event.stopPropagation(); setPointStatus('${point.id}', 'progress')"
+                        title="En cours">
+                        ⏳
+                    </button>
+                    <button 
+                        class="btn-status ${point.status === 'done' ? 'active status-done' : 'status-done'}" 
+                        onclick="event.stopPropagation(); setPointStatus('${point.id}', 'done')"
+                        title="Terminé">
+                        ✅
+                    </button>
+                </div>
+            </div>
+        `;
+
+        pointsList.appendChild(item);
+    });
+}
+
+/**
+ * Get all photos for a point, handling legacy single-photo format.
+ * Migrates old `photo` field to `photos` array transparently.
+ * 
+ * @param {Object} point - Point data object
+ * @returns {string[]} Array of photo data URLs
+ */
+function getPointPhotos(point) {
+    if (point.photos && point.photos.length > 0) {
+        return point.photos;
+    }
+    if (point.photo) {
+        return [point.photo];
+    }
+    return [];
+}
+
+/**
+ * Handle multi-photo selection in the new point modal.
+ * Compresses each selected photo and adds to pending array.
+ * 
+ * @param {Event} event - File input change event
+ */
+async function previewPhotos(event) {
+    const files = Array.from(event.target.files);
+    
+    for (const file of files) {
+        const compressed = await compressImage(file);
+        pendingPhotos.push(compressed);
+    }
+    
+    renderPhotoPreviewGrid('photoPreviews', pendingPhotos, false);
+}
+
+/**
+ * Handle multi-photo selection in the edit point modal.
+ * 
+ * @param {Event} event - File input change event
+ */
+async function previewEditPhotos(event) {
+    const files = Array.from(event.target.files);
+    
+    for (const file of files) {
+        const compressed = await compressImage(file);
+        editPendingPhotos.push(compressed);
+    }
+    
+    renderPhotoPreviewGrid('editPhotoPreviews', editPendingPhotos, true);
+}
+
+/**
+ * Render a grid of photo thumbnails with remove buttons.
+ * Used in both new and edit point modals.
+ * 
+ * @param {string} containerId - DOM id of the preview container
+ * @param {string[]} photos - Array of photo data URLs
+ * @param {boolean} isEdit - Whether this is the edit modal
+ */
+function renderPhotoPreviewGrid(containerId, photos, isEdit) {
+    const container = document.getElementById(containerId);
+    
+    container.innerHTML = photos.map((photo, index) => `
+        <div class="photo-thumb">
+            <img src="${photo}" alt="Photo ${index + 1}">
+            <button class="remove-photo" onclick="removePhoto(${index}, ${isEdit})" title="Supprimer">✕</button>
+        </div>
+    `).join('');
+}
+
+/**
+ * Remove a photo from the pending array.
+ * 
+ * @param {number} index - Photo index to remove
+ * @param {boolean} isEdit - Whether removing from edit modal
+ */
+function removePhoto(index, isEdit) {
+    if (isEdit) {
+        editPendingPhotos.splice(index, 1);
+        renderPhotoPreviewGrid('editPhotoPreviews', editPendingPhotos, true);
+    } else {
+        pendingPhotos.splice(index, 1);
+        renderPhotoPreviewGrid('photoPreviews', pendingPhotos, false);
+    }
+}
+
+/**
+ * Save a new point from the modal form data.
+ * Creates the point object, adds it to the current project,
+ * and persists to storage.
+ */
+async function savePoint() {
+    const title = document.getElementById('pointTitle').value.trim();
+    const comment = document.getElementById('pointComment').value.trim();
+    const status = document.getElementById('pointStatus').value;
+    const address = document.getElementById('pointAddress').value;
+
+    if (!title || !comment) {
+        alert('Veuillez remplir tous les champs obligatoires');
+        return;
+    }
+
+    if (!currentLatLng) {
+        alert('Erreur: Position non définie. Veuillez cliquer sur la carte.');
+        return;
+    }
+
+    if (!currentProject) {
+        alert('Erreur: Aucun projet sélectionné');
+        return;
+    }
+
+    const point = {
+        id: Date.now().toString(),
+        // Number based on max existing, not array length (handles deletions)
+        number: currentProject.points.length > 0
+            ? Math.max(...currentProject.points.map(p => p.number || 0)) + 1
+            : 1,
+        title: title,
+        comment: comment,
+        status: status,
+        statusHistory: [{
+            status: status,
+            date: new Date().toISOString(),
+            user: 'Admin'
+        }],
+        address: address || `${currentLatLng.lat.toFixed(6)}, ${currentLatLng.lng.toFixed(6)}`,
+        lat: currentLatLng.lat,
+        lng: currentLatLng.lng,
+        photos: [...pendingPhotos],  // Multi-photo array (NEW in 0.6.0)
+        photo: pendingPhotos[0] || null,  // Legacy compat: keep first photo in old field
+        createdAt: new Date().toISOString()
+    };
+
+    if (!currentProject.points) {
+        currentProject.points = [];
+    }
+    currentProject.points.push(point);
+
+    try {
+        await saveProject(currentProject);
+
+        closeModal('newPointModal');
+        resetPointForm();
+
+        if (currentMarker) {
+            map.removeLayer(currentMarker);
+            currentMarker = null;
+        }
+
+        renderMapMarkers();
+        renderPointsList();
+        updatePointsCount();
+        updateProjectStats();
+        currentLatLng = null;
+
+    } catch (error) {
+        console.error('Point save failed:', error);
+        currentProject.points.pop();
+
+        if (error.message.includes('quota')) {
+            alert('⚠️ Espace de stockage saturé!\n\nSolutions:\n• Archivez les anciens projets\n• Utilisez moins de photos');
+        } else {
+            alert('❌ Erreur: ' + error.message);
+        }
+    }
+}
+
+/**
+ * Open the edit modal for an existing point.
+ * Pre-fills all form fields with current point data.
+ * 
+ * @param {string} pointId - ID of the point to edit
+ */
+function editPointModal(pointId) {
+    editingPointId = pointId;
+    const point = currentProject.points.find(p => p.id === pointId);
+    if (!point) return;
+
+    document.getElementById('editPointTitle').value = point.title;
+    document.getElementById('editPointComment').value = point.comment;
+    document.getElementById('editPointStatus').value = point.status;
+
+    // Load existing photos into edit pending array
+    editPendingPhotos = [...getPointPhotos(point)];
+    renderPhotoPreviewGrid('editPhotoPreviews', editPendingPhotos, true);
+
+    document.getElementById('editPointModal').classList.add('active');
+}
+
+/**
+ * Save changes to an existing point.
+ * Updates status history if status changed.
+ */
+async function updatePoint() {
+    const point = currentProject.points.find(p => p.id === editingPointId);
+    if (!point) return;
+
+    const newStatus = document.getElementById('editPointStatus').value;
+    const oldStatus = point.status;
+
+    point.title = document.getElementById('editPointTitle').value.trim();
+    point.comment = document.getElementById('editPointComment').value.trim();
+    point.status = newStatus;
+
+    // Track status changes in history
+    if (oldStatus !== newStatus) {
+        if (!point.statusHistory) {
+            point.statusHistory = [{
+                status: oldStatus,
+                date: point.createdAt,
+                user: 'Admin'
+            }];
+        }
+        point.statusHistory.push({
+            status: newStatus,
+            date: new Date().toISOString(),
+            user: 'Admin',
+            previousStatus: oldStatus
+        });
+    }
+
+    // Update photos
+    point.photos = [...editPendingPhotos];
+    point.photo = editPendingPhotos[0] || null;  // Legacy compat
+
+    await saveProject(currentProject);
+    closeModal('editPointModal');
+    renderMapMarkers();
+    renderPointsList();
+    updateProjectStats();
+}
+
+/**
+ * Delete the currently edited point.
+ */
+async function deletePoint() {
+    if (!confirm('Voulez-vous vraiment supprimer ce point ?')) return;
+
+    currentProject.points = currentProject.points.filter(p => p.id !== editingPointId);
+    await saveProject(currentProject);
+
+    closeModal('editPointModal');
+    renderMapMarkers();
+    renderPointsList();
+    updatePointsCount();
+    updateProjectStats();
+}
+
+/**
+ * Quick-set point status from the points panel status buttons.
+ * Updates status history and refreshes the UI.
+ * 
+ * @param {string} pointId - ID of the point
+ * @param {string} newStatus - New status ('todo'|'progress'|'done')
+ */
+async function setPointStatus(pointId, newStatus) {
+    const point = currentProject.points.find(p => p.id === pointId);
+    if (!point || point.status === newStatus) return;
+
+    const oldStatus = point.status;
+    point.status = newStatus;
+
+    if (!point.statusHistory) {
+        point.statusHistory = [];
+    }
+    point.statusHistory.push({
+        status: newStatus,
+        date: new Date().toISOString(),
+        user: 'Admin',
+        previousStatus: oldStatus
+    });
+
+    await saveProject(currentProject);
+    renderMapMarkers();
+    renderPointsList();
+    updateProjectStats();
+}
+
+/**
+ * Reset the new point form to clean state.
+ */
+function resetPointForm() {
+    document.getElementById('pointTitle').value = '';
+    document.getElementById('pointComment').value = '';
+    document.getElementById('pointStatus').value = 'todo';
+    document.getElementById('pointAddress').value = '';
+    document.getElementById('photoInput').value = '';
+    document.getElementById('photoPreviews').innerHTML = '';
+    pendingPhotos = [];
+}
+
+    </script>
+    <script>
+    // === js/reports/standard.js ===
+/**
+ * ListKontrol - Standard HTML Report Generator
+ * =============================================
+ * 
+ * Generates a static (non-interactive) HTML report with:
+ * - Project overview with stats
+ * - Overview map showing all points
+ * - Individual point details with photos and map captures
+ * - Status history timeline
+ * - Google Maps links for each point
+ * 
+ * This is the original report format from Alpha 0.5.x.
+ * For the interactive version, see reports/interactive.js
+ */
+
+/**
+ * Generate a static HTML report with map screenshots.
+ * 
+ * @param {string} layerType - 'standard' or 'satellite' 
+ * @param {number} zoomLevel - Map zoom (default: 19)
+ */
+async function generateHTMLReportWithMaps(layerType = 'standard', zoomLevel = 19) {
+    reportGenerationCancelled = false;
+
+    const button = document.querySelector('#projectTools button[onclick="generateReport()"]');
+    const originalText = button.textContent;
+    button.textContent = '⏳ Génération...';
+    button.disabled = true;
+
+    try {
+        const points = [...currentProject.points];
+        const stats = getProjectStats(currentProject);
+
+        let htmlReport = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <title>Rapport ${currentProject.name}</title>
+                <style>
+                    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 1000px; margin: 40px auto; padding: 20px; background: #f8fafc; }
+                    .container { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+                    h1 { color: #0f172a; border-bottom: 4px solid #f97316; padding-bottom: 15px; margin-bottom: 30px; }
+                    .header { background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); padding: 25px; border-radius: 10px; margin-bottom: 40px; border-left: 4px solid #f97316; }
+                    .header h2 { margin: 0 0 15px 0; color: #0f172a; }
+                    .header p { margin: 5px 0; color: #64748b; }
+                    .overview-section { background: #fef3c7; padding: 25px; border-radius: 10px; margin-bottom: 40px; border: 2px solid #f97316; }
+                    .overview-section h3 { margin: 0 0 15px 0; color: #92400e; }
+                    .overview-map { width: 100%; border-radius: 10px; border: 3px solid white; box-shadow: 0 4px 12px rgba(0,0,0,0.2); margin-top: 15px; }
+                    .point { background: white; border: 2px solid #e2e8f0; border-radius: 12px; padding: 25px; margin-bottom: 40px; page-break-inside: avoid; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+                    .point-header { display: flex; justify-content: space-between; align-items: start; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #f1f5f9; }
+                    .point-number { background: #f97316; color: white; width: 40px; height: 40px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: bold; font-size: 18px; margin-right: 15px; box-shadow: 0 2px 8px rgba(249,115,22,0.4); }
+                    .point-title { font-size: 22px; font-weight: bold; color: #0f172a; flex: 1; }
+                    .badge { display: inline-block; padding: 6px 14px; border-radius: 8px; font-size: 13px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; }
+                    .badge-todo { background: #fef3c7; color: #92400e; }
+                    .badge-progress { background: #dbeafe; color: #1e40af; }
+                    .badge-done { background: #d1fae5; color: #065f46; }
+                    .meta { color: #64748b; font-size: 14px; margin: 15px 0; line-height: 1.8; }
+                    .gps-link { color: #f97316; text-decoration: none; font-weight: 600; padding: 4px 8px; background: #fff7ed; border-radius: 4px; display: inline-block; }
+                    .gps-link:hover { background: #f97316; color: white; }
+                    .status-history { background: #f8fafc; border-left: 4px solid #3b82f6; padding: 16px 20px; margin: 20px 0; border-radius: 8px; }
+                    .status-history h4 { color: #0f172a; margin-bottom: 10px; font-size: 14px; }
+                    .status-entry { display: flex; gap: 12px; align-items: center; padding: 6px 0; font-size: 13px; border-bottom: 1px solid #e2e8f0; }
+                    .status-entry:last-child { border-bottom: none; }
+                    .status-entry-label { font-weight: 600; min-width: 120px; }
+                    .status-entry-date { color: #64748b; }
+                    .status-entry-user { color: #94a3b8; font-style: italic; }
+                    .comment { margin: 15px 0; line-height: 1.6; }
+                    .images { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-top: 20px; }
+                    .image-container { border-radius: 10px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+                    .image-container img { width: 100%; display: block; }
+                    .image-label { padding: 10px; text-align: center; font-size: 13px; color: #64748b; background: #f8fafc; font-weight: 600; }
+                    .report-footer { text-align: center; padding: 30px; color: #94a3b8; font-size: 13px; border-top: 2px solid #e2e8f0; margin-top: 40px; }
+                    @media print { body { margin: 0; } .container { box-shadow: none; } }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <h1>📋 Rapport de Suivi - ${currentProject.name}</h1>
+                    <div class="header">
+                        <h2>📊 Informations du projet</h2>
+                        <p><strong>Projet:</strong> ${currentProject.name}</p>
+                        ${currentProject.description ? `<p><strong>Description:</strong> ${currentProject.description}</p>` : ''}
+                        <p><strong>Date du rapport:</strong> ${new Date().toLocaleString('fr-FR')}</p>
+                        <p><strong>Nombre de points:</strong> ${points.length}</p>
+                        <p><strong>Avancement:</strong> ⏸ ${stats.todo} à faire | ⏳ ${stats.progress} en cours | ✅ ${stats.done} terminé</p>
+                    </div>
+        `;
+
+        // Overview map
+        console.log('🗺️ Capturing overview map...');
+        showReportProgress(0, points.length + 1, 'Capture de la carte générale...');
+        const overviewMapImage = await captureOverviewMap(points, layerType);
+
+        if (overviewMapImage) {
+            htmlReport += `
+                <div class="overview-section">
+                    <h3>🗺️ Vue d'ensemble - Tous les points</h3>
+                    <img src="${overviewMapImage}" class="overview-map" alt="Carte générale">
+                </div>
+            `;
+        }
+
+        // Individual points
+        for (let i = 0; i < points.length; i++) {
+            if (reportGenerationCancelled) {
+                hideReportProgress();
+                alert('❌ Génération annulée');
+                return;
+            }
+
+            const point = points[i];
+            showReportProgress(i + 1, points.length + 1, `Point ${point.number}: ${point.title}`);
+
+            const statusClass = point.status === 'done' ? 'badge-done' :
+                              point.status === 'progress' ? 'badge-progress' : 'badge-todo';
+            const statusText = point.status === 'done' ? '✓ Terminé' :
+                             point.status === 'progress' ? '⏳ En cours' : '⏸ À faire';
+
+            const mapImage = await captureMapForPoint(point, layerType, zoomLevel);
+            const googleMapsLink = `https://www.google.com/maps?q=${point.lat},${point.lng}`;
+            const photos = getPointPhotos(point);
+
+            htmlReport += `
+                <div class="point">
+                    <div class="point-header">
+                        <div style="display: flex; align-items: center; flex: 1;">
+                            <span class="point-number">${point.number}</span>
+                            <div class="point-title">${point.title}</div>
+                        </div>
+                        <span class="badge ${statusClass}">${statusText}</span>
+                    </div>
+                    <div class="meta">
+                        📍 <strong>Adresse:</strong> ${point.address}<br>
+                        📅 <strong>Date:</strong> ${new Date(point.createdAt).toLocaleString('fr-FR')}<br>
+                        🌐 <strong>GPS:</strong> <a href="${googleMapsLink}" target="_blank" class="gps-link">📍 ${point.lat.toFixed(6)}, ${point.lng.toFixed(6)} - Ouvrir dans Maps</a>
+                    </div>
+                    ${point.statusHistory && point.statusHistory.length > 0 ? `
+                    <div class="status-history">
+                        <h4>📊 Historique du statut</h4>
+                        <div class="status-timeline">
+                            ${point.statusHistory.map(entry => {
+                                const label = entry.status === 'done' ? '✅ Terminé' :
+                                             entry.status === 'progress' ? '⏳ En cours' : '⏸️ À faire';
+                                const d = new Date(entry.date);
+                                return `<div class="status-entry">
+                                    <span class="status-entry-label">${label}</span>
+                                    <span class="status-entry-date">le ${d.toLocaleDateString('fr-FR')} à ${d.toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'})}</span>
+                                    <span class="status-entry-user">par ${entry.user}</span>
+                                </div>`;
+                            }).join('')}
+                        </div>
+                    </div>
+                    ` : ''}
+                    <div class="comment">
+                        <strong>📝 Travaux à effectuer:</strong>
+                        ${point.comment.replace(/\n/g, '<br>')}
+                    </div>
+                    <div class="images">
+                        ${photos.map((photo, pi) => `
+                        <div class="image-container">
+                            <img src="${photo}" alt="Photo ${pi + 1}">
+                            <div class="image-label">📷 Photo ${pi + 1}</div>
+                        </div>
+                        `).join('')}
+                        ${mapImage ? `
+                        <div class="image-container">
+                            <img src="${mapImage}" alt="Localisation">
+                            <div class="image-label">🗺️ Localisation</div>
+                        </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        hideReportProgress();
+
+        htmlReport += `
+                    <div class="report-footer">
+                        <p>Rapport généré par <strong>ListKontrol</strong> Alpha 0.7.0</p>
+                        <p>🏗️ Outil open-source de suivi de chantiers VRD</p>
+                    </div>
+                </div>
+            </body>
+            </html>
+        `;
+
+        const blob = new Blob([htmlReport], { type: 'text/html;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `ListK_${currentProject.name}_${Date.now()}.html`;
+        link.click();
+
+        alert('✅ Rapport HTML généré avec succès !');
+
+    } catch (error) {
+        console.error('Report generation error:', error);
+        hideReportProgress();
+        alert('❌ Erreur: ' + error.message);
+    } finally {
+        button.textContent = originalText;
+        button.disabled = false;
+    }
+}
+
+    </script>
+    <script>
+    // === js/reports/interactive.js ===
+/**
+ * ListKontrol - Interactive HTML Report Generator
+ * ================================================
+ * 
+ * THIS IS THE KEY FEATURE OF ALPHA 0.6.0
+ * 
+ * Generates a self-contained HTML file that recipients can:
+ * 1. View all points with maps and photos (same as standard report)
+ * 2. Change point statuses directly in the report
+ * 3. Add photos to points
+ * 4. Add comments/notes
+ * 5. Export all changes as a .json sync file
+ * 
+ * The sync file can then be imported back into ListKontrol to apply
+ * all modifications with full traceability (who changed what, when).
+ * 
+ * WHY THIS APPROACH:
+ * - No authentication needed (just email/share the HTML file)
+ * - Works 100% offline (no server required)
+ * - Simple workflow: send HTML → get back JSON → import
+ * - Enterprises can work without installing anything
+ * - Full audit trail of all changes
+ * 
+ * ARCHITECTURE:
+ * The generated HTML file embeds:
+ * - All point data as a JSON blob in a <script> tag
+ * - All photos as base64 inline images
+ * - All map screenshots as base64 inline images
+ * - A complete JavaScript application for interaction
+ * - CSS for the interactive UI (status buttons, upload areas, etc.)
+ * 
+ * Changes are tracked in-memory within the report and can be exported
+ * as a JSON file for re-import into the main app.
+ */
+
+/**
+ * Generate an interactive HTML report for the current project.
+ * This is the main entry point, called from the report format selection.
+ * 
+ * @param {string} layerType - Map tile layer ('standard' or 'satellite')
+ * @param {number} zoomLevel - Map zoom level for point captures
+ */
+async function generateInteractiveReport(layerType = 'standard', zoomLevel = 19) {
+    reportGenerationCancelled = false;
+
+    const button = document.querySelector('#projectTools button[onclick="generateReport()"]');
+    const originalText = button.textContent;
+    button.textContent = '⏳ Génération...';
+    button.disabled = true;
+
+    try {
+        const points = [...currentProject.points];
+        const projectData = {
+            id: currentProject.id,
+            name: currentProject.name,
+            description: currentProject.description,
+            generatedAt: new Date().toISOString(),
+            generatedBy: 'Admin',
+            points: []
+        };
+
+        // Capture overview map
+        console.log('🗺️ Capturing overview map...');
+        showReportProgress(0, points.length + 1, 'Capture de la carte générale...');
+        const overviewMapImage = await captureOverviewMap(points, layerType);
+
+        // Capture individual point maps
+        for (let i = 0; i < points.length; i++) {
+            if (reportGenerationCancelled) {
+                hideReportProgress();
+                alert('❌ Génération annulée');
+                return;
+            }
+
+            const point = points[i];
+            showReportProgress(i + 1, points.length + 1, `Capture du point ${point.number}: ${point.title}`);
+
+            const mapImage = await captureMapForPoint(point, layerType, zoomLevel);
+
+            projectData.points.push({
+                id: point.id,
+                number: point.number,
+                title: point.title,
+                comment: point.comment,
+                status: point.status,
+                statusHistory: point.statusHistory || [],
+                address: point.address,
+                lat: point.lat,
+                lng: point.lng,
+                photos: getPointPhotos(point),
+                mapImage: mapImage,
+                createdAt: point.createdAt
+            });
+        }
+
+        hideReportProgress();
+
+        // Build the self-contained interactive HTML
+        const htmlReport = buildInteractiveHTML(projectData, overviewMapImage);
+
+        // Download
+        const blob = new Blob([htmlReport], { type: 'text/html;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `ListK_${currentProject.name}_interactif_${Date.now()}.html`;
+        link.click();
+
+        alert(
+            '✅ Rapport interactif généré !\n\n' +
+            '📧 Envoyez ce fichier HTML à l\'entreprise.\n' +
+            'Elle pourra modifier les statuts, ajouter des photos et des notes.\n\n' +
+            '📥 Pour récupérer les modifications, importez le fichier .json\n' +
+            'qu\'elle vous renverra via le bouton "📥 Importer" dans la toolbar.'
+        );
+
+    } catch (error) {
+        console.error('Interactive report generation error:', error);
+        hideReportProgress();
+        alert('❌ Erreur: ' + error.message);
+    } finally {
+        button.textContent = originalText;
+        button.disabled = false;
+    }
+}
+
+/**
+ * Build the complete self-contained interactive HTML string.
+ * This is a large function because the HTML must include ALL code
+ * needed for the interactive features (no external dependencies).
+ * 
+ * @param {Object} projectData - Serialized project with base64 images
+ * @param {string|null} overviewMapImage - Base64 overview map image
+ * @returns {string} Complete HTML document string
+ */
+function buildInteractiveHTML(projectData, overviewMapImage) {
+    const stats = {
+        todo: projectData.points.filter(p => p.status === 'todo').length,
+        progress: projectData.points.filter(p => p.status === 'progress').length,
+        done: projectData.points.filter(p => p.status === 'done').length
+    };
+
+    return `<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rapport Interactif - ${projectData.name}</title>
+    <style>
+        /* ============================================================
+           Interactive Report Styles
+           Self-contained CSS for the standalone HTML report.
+           No external dependencies needed.
+           ============================================================ */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f8fafc;
+            color: #0f172a;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .report-card {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        h1 { 
+            color: #0f172a; 
+            border-bottom: 4px solid #f97316; 
+            padding-bottom: 15px;
+            margin-bottom: 10px;
+        }
+
+        .interactive-banner {
+            background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+            color: white;
+            padding: 16px 24px;
+            border-radius: 10px;
+            margin: 20px 0 30px 0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 15px;
+        }
+
+        .interactive-banner strong { font-size: 17px; }
+
+        /* Sync bar: Shows number of pending changes */
+        .sync-bar {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: #1e293b;
+            color: white;
+            padding: 12px 24px;
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        .sync-bar.has-changes { display: flex; }
+
+        .sync-bar .btn-sync {
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .sync-bar .btn-sync:hover { background: #059669; }
+
+        .header-info {
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            padding: 25px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            border-left: 4px solid #f97316;
+        }
+
+        .header-info h2 { margin: 0 0 15px 0; color: #0f172a; }
+        .header-info p { margin: 5px 0; color: #64748b; }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin: 20px 0 30px 0;
+        }
+
+        .stat-card {
+            padding: 16px;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .stat-todo { background: #fef3c7; color: #92400e; }
+        .stat-progress { background: #dbeafe; color: #1e40af; }
+        .stat-done { background: #d1fae5; color: #065f46; }
+
+        .stat-card .stat-number { font-size: 28px; display: block; }
+        .stat-card .stat-label { font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+        .overview-section {
+            background: #fef3c7;
+            padding: 25px;
+            border-radius: 10px;
+            margin-bottom: 40px;
+            border: 2px solid #f97316;
+        }
+
+        .overview-section h3 { margin: 0 0 15px 0; color: #92400e; }
+
+        .overview-map {
+            width: 100%;
+            border-radius: 10px;
+            border: 3px solid white;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            margin-top: 15px;
+        }
+
+        /* Point card with interactive elements */
+        .point {
+            background: white;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 30px;
+            page-break-inside: avoid;
+            transition: border-color 0.3s;
+        }
+
+        .point.modified {
+            border-color: #f97316;
+            box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
+        }
+
+        .point-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f1f5f9;
+        }
+
+        .point-number {
+            background: #f97316;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 18px;
+            margin-right: 15px;
+        }
+
+        .point-title { font-size: 20px; font-weight: bold; color: #0f172a; flex: 1; }
+
+        .badge {
+            display: inline-block;
+            padding: 6px 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .badge-todo { background: #fef3c7; color: #92400e; }
+        .badge-progress { background: #dbeafe; color: #1e40af; }
+        .badge-done { background: #d1fae5; color: #065f46; }
+
+        .meta { color: #64748b; font-size: 14px; margin: 15px 0; line-height: 1.8; }
+
+        .gps-link {
+            color: #f97316;
+            text-decoration: none;
+            font-weight: 600;
+            padding: 4px 8px;
+            background: #fff7ed;
+            border-radius: 4px;
+        }
+
+        .gps-link:hover { background: #f97316; color: white; }
+
+        .comment { margin: 15px 0; line-height: 1.6; }
+
+        /* Status history timeline */
+        .status-history {
+            background: #f8fafc;
+            border-left: 4px solid #3b82f6;
+            padding: 16px 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        .status-history h4 { color: #0f172a; margin-bottom: 10px; font-size: 14px; }
+        .status-entry { display: flex; gap: 12px; align-items: center; padding: 6px 0; font-size: 13px; border-bottom: 1px solid #e2e8f0; }
+        .status-entry:last-child { border-bottom: none; }
+        .status-entry-label { font-weight: 600; min-width: 120px; }
+        .status-entry-date { color: #64748b; }
+        .status-entry-user { color: #94a3b8; font-style: italic; }
+
+        /* Images grid */
+        .images {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 16px;
+            margin-top: 20px;
+        }
+
+        .image-container { border-radius: 10px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .image-container img { width: 100%; display: block; }
+        .image-label { padding: 10px; text-align: center; font-size: 13px; color: #64748b; background: #f8fafc; font-weight: 600; }
+
+        /* ============================================================
+           INTERACTIVE CONTROLS - New in 0.6.0
+           These elements allow the report recipient to make changes
+           ============================================================ */
+
+        .interactive-section {
+            background: #fffbeb;
+            border: 2px dashed #f59e0b;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .interactive-section h4 {
+            color: #92400e;
+            margin-bottom: 12px;
+            font-size: 15px;
+        }
+
+        /* Status toggle buttons */
+        .status-buttons {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .status-btn {
+            padding: 10px 20px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            background: white;
+            transition: all 0.2s;
+        }
+
+        .status-btn:hover { transform: translateY(-1px); box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .status-btn.active-todo { border-color: #f59e0b; background: #fef3c7; }
+        .status-btn.active-progress { border-color: #3b82f6; background: #dbeafe; }
+        .status-btn.active-done { border-color: #10b981; background: #d1fae5; }
+
+        /* Photo upload area */
+        .add-photo-area {
+            border: 2px dashed #e2e8f0;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 12px;
+        }
+
+        .add-photo-area:hover { border-color: #f97316; background: #fff7ed; }
+
+        .added-photos-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .added-photos-grid img {
+            width: 100%;
+            aspect-ratio: 1;
+            object-fit: cover;
+            border-radius: 6px;
+        }
+
+        /* Notes/comments textarea */
+        .add-note-area textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 14px;
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .add-note-area textarea:focus {
+            outline: none;
+            border-color: #f97316;
+        }
+
+        .added-notes {
+            margin-top: 12px;
+        }
+
+        .note-item {
+            background: white;
+            border-left: 3px solid #f97316;
+            padding: 10px 14px;
+            margin-bottom: 8px;
+            border-radius: 0 6px 6px 0;
+            font-size: 14px;
+        }
+
+        .note-item .note-date {
+            font-size: 12px;
+            color: #94a3b8;
+            margin-top: 4px;
+        }
+
+        .modified-badge {
+            display: inline-block;
+            background: #f97316;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+
+        /* Footer */
+        .report-footer {
+            text-align: center;
+            padding: 30px;
+            color: #94a3b8;
+            font-size: 13px;
+            border-top: 2px solid #e2e8f0;
+            margin-top: 40px;
+        }
+
+        @media (max-width: 600px) {
+            .report-card { padding: 20px; }
+            .stats-grid { grid-template-columns: 1fr; }
+            .images { grid-template-columns: 1fr; }
+            .status-buttons { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Sync bar: Appears when changes are made -->
+<div class="sync-bar" id="syncBar">
+    <span>🔄 <strong id="changeCount">0</strong> modification(s) en attente</span>
+    <button class="btn-sync" onclick="exportSyncFile()">💾 Télécharger fichier de synchronisation</button>
+</div>
+
+<div class="container">
+    <div class="report-card">
+        <h1>📋 Rapport de Suivi - ${projectData.name}</h1>
+
+        <div class="interactive-banner">
+            <span style="font-size: 24px;">✏️</span>
+            <div>
+                <strong>Rapport interactif</strong><br>
+                Vous pouvez modifier les statuts, ajouter des photos et des notes directement dans ce document.
+                Cliquez sur "Télécharger fichier de synchronisation" pour renvoyer vos modifications.
+            </div>
+        </div>
+
+        <div class="header-info">
+            <h2>📊 Informations du projet</h2>
+            <p><strong>Projet:</strong> ${projectData.name}</p>
+            ${projectData.description ? `<p><strong>Description:</strong> ${projectData.description}</p>` : ''}
+            <p><strong>Rapport généré le:</strong> ${new Date(projectData.generatedAt).toLocaleString('fr-FR')}</p>
+            <p><strong>Nombre de points:</strong> ${projectData.points.length}</p>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card stat-todo">
+                <span class="stat-number" id="statTodo">${stats.todo}</span>
+                <span class="stat-label">À faire</span>
+            </div>
+            <div class="stat-card stat-progress">
+                <span class="stat-number" id="statProgress">${stats.progress}</span>
+                <span class="stat-label">En cours</span>
+            </div>
+            <div class="stat-card stat-done">
+                <span class="stat-number" id="statDone">${stats.done}</span>
+                <span class="stat-label">Terminé</span>
+            </div>
+        </div>
+
+        ${overviewMapImage ? `
+        <div class="overview-section">
+            <h3>🗺️ Vue d'ensemble</h3>
+            <img src="${overviewMapImage}" class="overview-map" alt="Carte générale">
+        </div>
+        ` : ''}
+
+        ${projectData.points.map((point, i) => {
+            const statusClass = point.status === 'done' ? 'badge-done' :
+                              point.status === 'progress' ? 'badge-progress' : 'badge-todo';
+            const statusText = point.status === 'done' ? '✓ Terminé' :
+                             point.status === 'progress' ? '⏳ En cours' : '⏸ À faire';
+            const googleMapsLink = `https://www.google.com/maps?q=${point.lat},${point.lng}`;
+
+            return `
+        <div class="point" id="point-${point.id}" data-point-id="${point.id}">
+            <div class="point-header">
+                <div style="display: flex; align-items: center; flex: 1;">
+                    <span class="point-number">${point.number}</span>
+                    <div class="point-title">${point.title}</div>
+                </div>
+                <span class="badge ${statusClass}" id="badge-${point.id}">${statusText}</span>
+            </div>
+
+            <div class="meta">
+                📍 <strong>Adresse:</strong> ${point.address}<br>
+                📅 <strong>Date:</strong> ${new Date(point.createdAt).toLocaleString('fr-FR')}<br>
+                🌐 <strong>GPS:</strong> <a href="${googleMapsLink}" target="_blank" class="gps-link">📍 ${point.lat.toFixed(6)}, ${point.lng.toFixed(6)} - Ouvrir dans Maps</a>
+            </div>
+
+            ${point.statusHistory && point.statusHistory.length > 0 ? `
+            <div class="status-history" id="history-${point.id}">
+                <h4>📊 Historique du statut</h4>
+                <div class="status-timeline">
+                    ${point.statusHistory.map(entry => {
+                        const label = entry.status === 'done' ? '✅ Terminé' :
+                                     entry.status === 'progress' ? '⏳ En cours' : '⏸️ À faire';
+                        const d = new Date(entry.date);
+                        return `
+                    <div class="status-entry">
+                        <span class="status-entry-label">${label}</span>
+                        <span class="status-entry-date">le ${d.toLocaleDateString('fr-FR')} à ${d.toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'})}</span>
+                        <span class="status-entry-user">par ${entry.user}</span>
+                    </div>`;
+                    }).join('')}
+                </div>
+            </div>
+            ` : ''}
+
+            <div class="comment">
+                <strong>📝 Travaux à effectuer:</strong><br>
+                ${point.comment.replace(/\\n/g, '<br>')}
+            </div>
+
+            <div class="images">
+                ${point.photos.map((photo, pi) => `
+                <div class="image-container">
+                    <img src="${photo}" alt="Photo ${pi + 1}">
+                    <div class="image-label">📷 Photo ${pi + 1}</div>
+                </div>
+                `).join('')}
+                ${point.mapImage ? `
+                <div class="image-container">
+                    <img src="${point.mapImage}" alt="Localisation">
+                    <div class="image-label">🗺️ Localisation</div>
+                </div>
+                ` : ''}
+            </div>
+
+            <!-- INTERACTIVE CONTROLS -->
+            <div class="interactive-section">
+                <h4>✏️ Modifier ce point</h4>
+
+                <!-- Status buttons -->
+                <div class="status-buttons">
+                    <button class="status-btn ${point.status === 'todo' ? 'active-todo' : ''}" 
+                            onclick="changeStatus('${point.id}', 'todo')" id="btn-todo-${point.id}">
+                        ⏸️ À faire
+                    </button>
+                    <button class="status-btn ${point.status === 'progress' ? 'active-progress' : ''}" 
+                            onclick="changeStatus('${point.id}', 'progress')" id="btn-progress-${point.id}">
+                        ⏳ En cours
+                    </button>
+                    <button class="status-btn ${point.status === 'done' ? 'active-done' : ''}" 
+                            onclick="changeStatus('${point.id}', 'done')" id="btn-done-${point.id}">
+                        ✅ Terminé
+                    </button>
+                </div>
+
+                <!-- Photo upload -->
+                <div class="add-photo-area" onclick="document.getElementById('photo-input-${point.id}').click()">
+                    📷 Cliquer pour ajouter une photo
+                    <input type="file" id="photo-input-${point.id}" accept="image/*" capture="environment" 
+                           style="display:none" onchange="addPhoto('${point.id}', event)">
+                </div>
+                <div class="added-photos-grid" id="added-photos-${point.id}"></div>
+
+                <!-- Notes -->
+                <div class="add-note-area">
+                    <textarea id="note-input-${point.id}" placeholder="Ajouter une note ou un commentaire..."></textarea>
+                    <button class="status-btn" style="margin-top: 8px;" onclick="addNote('${point.id}')">
+                        💬 Ajouter la note
+                    </button>
+                </div>
+                <div class="added-notes" id="added-notes-${point.id}"></div>
+            </div>
+        </div>
+        `;
+        }).join('')}
+
+        <div class="report-footer">
+            <p>Rapport généré par <strong>ListKontrol</strong> Alpha 0.7.0</p>
+            <p>🏗️ Outil open-source de suivi de chantiers VRD</p>
+        </div>
+    </div>
+</div>
+
+<script>
+/**
+ * ================================================================
+ * INTERACTIVE REPORT - Embedded JavaScript
+ * ================================================================
+ * 
+ * This code runs inside the generated HTML report file.
+ * It manages all interactive features: status changes, photo uploads,
+ * notes, and sync file export.
+ * 
+ * Changes are stored in the 'changes' object and can be exported
+ * as a JSON file for import back into ListKontrol.
+ */
+
+// Project data embedded at generation time
+var projectData = ${JSON.stringify({
+    id: projectData.id,
+    name: projectData.name,
+    generatedAt: projectData.generatedAt,
+    generatedBy: projectData.generatedBy,
+    points: projectData.points.map(p => ({
+        id: p.id,
+        number: p.number,
+        title: p.title,
+        status: p.status,
+        statusHistory: p.statusHistory
+    }))
+})};
+
+// Track all modifications made in this report
+var changes = {};
+var editorName = null;
+
+/**
+ * Prompt for the editor's name (first interaction only).
+ * Used for traceability in the sync file.
+ */
+function getEditorName() {
+    if (!editorName) {
+        editorName = prompt(
+            "Veuillez entrer votre nom ou celui de votre entreprise.\\n" +
+            "Ce nom apparaîtra dans l'historique des modifications."
+        ) || 'Utilisateur externe';
+    }
+    return editorName;
+}
+
+/**
+ * Initialize or get the changes object for a point.
+ */
+function getPointChanges(pointId) {
+    if (!changes[pointId]) {
+        changes[pointId] = {
+            statusChange: null,
+            addedPhotos: [],
+            addedNotes: []
+        };
+    }
+    return changes[pointId];
+}
+
+/**
+ * Update the sync bar to show number of pending changes.
+ */
+function updateSyncBar() {
+    var count = 0;
+    for (var id in changes) {
+        var c = changes[id];
+        if (c.statusChange) count++;
+        count += c.addedPhotos.length;
+        count += c.addedNotes.length;
+    }
+
+    document.getElementById('changeCount').textContent = count;
+    var bar = document.getElementById('syncBar');
+    if (count > 0) {
+        bar.classList.add('has-changes');
+    } else {
+        bar.classList.remove('has-changes');
+    }
+}
+
+/**
+ * Update stats display.
+ */
+function updateStats() {
+    var todo = 0, progress = 0, done = 0;
+    projectData.points.forEach(function(p) {
+        var c = changes[p.id];
+        var status = (c && c.statusChange) ? c.statusChange.newStatus : p.status;
+        if (status === 'todo') todo++;
+        else if (status === 'progress') progress++;
+        else if (status === 'done') done++;
+    });
+    document.getElementById('statTodo').textContent = todo;
+    document.getElementById('statProgress').textContent = progress;
+    document.getElementById('statDone').textContent = done;
+}
+
+/**
+ * Change the status of a point.
+ * Updates the visual badge, button states, and tracks the change.
+ */
+function changeStatus(pointId, newStatus) {
+    var name = getEditorName();
+    var c = getPointChanges(pointId);
+
+    // Find original status
+    var point = projectData.points.find(function(p) { return p.id === pointId; });
+    var originalStatus = point.status;
+
+    c.statusChange = {
+        previousStatus: originalStatus,
+        newStatus: newStatus,
+        date: new Date().toISOString(),
+        user: name
+    };
+
+    // Update badge
+    var badge = document.getElementById('badge-' + pointId);
+    badge.className = 'badge badge-' + (newStatus === 'done' ? 'done' : newStatus === 'progress' ? 'progress' : 'todo');
+    badge.textContent = newStatus === 'done' ? '✓ Terminé' : newStatus === 'progress' ? '⏳ En cours' : '⏸ À faire';
+
+    // Update buttons
+    ['todo', 'progress', 'done'].forEach(function(s) {
+        var btn = document.getElementById('btn-' + s + '-' + pointId);
+        btn.className = 'status-btn' + (s === newStatus ? ' active-' + s : '');
+    });
+
+    // Mark point as modified
+    document.getElementById('point-' + pointId).classList.add('modified');
+
+    // Add to status history display
+    var historyEl = document.getElementById('history-' + pointId);
+    if (historyEl) {
+        var timeline = historyEl.querySelector('.status-timeline');
+        var label = newStatus === 'done' ? '✅ Terminé' : newStatus === 'progress' ? '⏳ En cours' : '⏸️ À faire';
+        var now = new Date();
+        timeline.innerHTML += '<div class="status-entry">' +
+            '<span class="status-entry-label">' + label + '<span class="modified-badge">MODIFIÉ</span></span>' +
+            '<span class="status-entry-date">le ' + now.toLocaleDateString('fr-FR') + ' à ' + now.toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'}) + '</span>' +
+            '<span class="status-entry-user">par ' + name + '</span>' +
+            '</div>';
+    }
+
+    updateSyncBar();
+    updateStats();
+}
+
+/**
+ * Add a photo to a point from file input.
+ * Compresses the image and stores it in the changes object.
+ */
+function addPhoto(pointId, event) {
+    var name = getEditorName();
+    var file = event.target.files[0];
+    if (!file) return;
+
+    var reader = new FileReader();
+    reader.onload = function(e) {
+        // Compress
+        var img = new Image();
+        img.onload = function() {
+            var canvas = document.createElement('canvas');
+            var maxW = 1200;
+            var w = img.width, h = img.height;
+            if (w > maxW) { h = (h * maxW) / w; w = maxW; }
+            canvas.width = w;
+            canvas.height = h;
+            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+            var dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+
+            var c = getPointChanges(pointId);
+            c.addedPhotos.push({
+                data: dataUrl,
+                date: new Date().toISOString(),
+                user: name
+            });
+
+            // Show preview
+            var grid = document.getElementById('added-photos-' + pointId);
+            grid.innerHTML += '<img src="' + dataUrl + '" alt="Photo ajoutée">';
+
+            document.getElementById('point-' + pointId).classList.add('modified');
+            updateSyncBar();
+        };
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+}
+
+/**
+ * Add a text note to a point.
+ */
+function addNote(pointId) {
+    var name = getEditorName();
+    var textarea = document.getElementById('note-input-' + pointId);
+    var text = textarea.value.trim();
+    if (!text) return;
+
+    var c = getPointChanges(pointId);
+    var noteData = {
+        text: text,
+        date: new Date().toISOString(),
+        user: name
+    };
+    c.addedNotes.push(noteData);
+
+    // Show note
+    var container = document.getElementById('added-notes-' + pointId);
+    var now = new Date();
+    container.innerHTML += '<div class="note-item">' +
+        '<div>' + text.replace(/\\n/g, '<br>') + '</div>' +
+        '<div class="note-date">💬 ' + name + ' - ' + now.toLocaleString('fr-FR') + '</div>' +
+        '</div>';
+
+    textarea.value = '';
+    document.getElementById('point-' + pointId).classList.add('modified');
+    updateSyncBar();
+}
+
+/**
+ * Export all changes as a JSON sync file.
+ * This file is sent back to the ListKontrol admin for import.
+ */
+function exportSyncFile() {
+    var syncData = {
+        version: '0.6.0',
+        type: 'listk-sync',
+        projectId: projectData.id,
+        projectName: projectData.name,
+        generatedAt: projectData.generatedAt,
+        syncCreatedAt: new Date().toISOString(),
+        editor: editorName || 'Anonyme',
+        changes: {}
+    };
+
+    // Only include points that have actual changes
+    for (var id in changes) {
+        var c = changes[id];
+        if (c.statusChange || c.addedPhotos.length > 0 || c.addedNotes.length > 0) {
+            syncData.changes[id] = c;
+        }
+    }
+
+    var blob = new Blob([JSON.stringify(syncData, null, 2)], { type: 'application/json' });
+    var link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'ListK_sync_' + projectData.name.replace(/[^a-zA-Z0-9]/g, '_') + '_' + Date.now() + '.json';
+    link.click();
+
+    alert(
+        '✅ Fichier de synchronisation téléchargé !\\n\\n' +
+        '📧 Envoyez ce fichier .json au responsable du projet.\\n' +
+        'Il pourra importer vos modifications dans ListKontrol.'
+    );
+}
+<\/script>
+</body>
+</html>`;
+}
+
+    </script>
+    <script>
+    // === js/reports/sync.js ===
+/**
+ * ListKontrol - Sync Import Module
+ * =================================
+ * 
+ * Handles importing changes from interactive report sync files (.json)
+ * back into the application. This closes the collaboration loop:
+ * 
+ * Admin generates report → Enterprise modifies → Exports sync JSON
+ * → Admin imports sync file → All changes applied with full traceability
+ * 
+ * Sync file format (version 0.6.0):
+ * {
+ *   version: "0.6.0",
+ *   type: "listk-sync",
+ *   projectId: string,
+ *   projectName: string,
+ *   syncCreatedAt: string (ISO date),
+ *   editor: string (name of person who made changes),
+ *   changes: {
+ *     [pointId]: {
+ *       statusChange: { previousStatus, newStatus, date, user },
+ *       addedPhotos: [{ data (base64), date, user }],
+ *       addedNotes: [{ text, date, user }]
+ *     }
+ *   }
+ * }
+ */
+
+// Temporary storage for the loaded sync data before applying
+let pendingSyncData = null;
+
+/**
+ * Handle sync file selection from the import modal.
+ * Validates the file format and shows a preview of changes.
+ * 
+ * @param {Event} event - File input change event
+ */
+function handleSyncFileSelect(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const data = JSON.parse(e.target.result);
+
+            // Validate sync file format
+            if (data.type !== 'listk-sync') {
+                alert('❌ Ce fichier n\'est pas un fichier de synchronisation ListKontrol valide.');
+                return;
+            }
+
+            if (!data.changes || Object.keys(data.changes).length === 0) {
+                alert('ℹ️ Ce fichier ne contient aucune modification.');
+                return;
+            }
+
+            pendingSyncData = data;
+            renderSyncPreview(data);
+
+        } catch (error) {
+            alert('❌ Erreur de lecture du fichier: ' + error.message);
+        }
+    };
+    reader.readAsText(file);
+}
+
+/**
+ * Render a preview of the sync changes before applying.
+ * Shows what will be modified so the admin can review before confirming.
+ * 
+ * @param {Object} data - Parsed sync file data
+ */
+function renderSyncPreview(data) {
+    const preview = document.getElementById('syncPreview');
+    const applyBtn = document.getElementById('applySyncBtn');
+
+    let statusChanges = 0;
+    let photosAdded = 0;
+    let notesAdded = 0;
+
+    for (const pointId in data.changes) {
+        const c = data.changes[pointId];
+        if (c.statusChange) statusChanges++;
+        if (c.addedPhotos) photosAdded += c.addedPhotos.length;
+        if (c.addedNotes) notesAdded += c.addedNotes.length;
+    }
+
+    // Check if this sync belongs to the current project
+    const matchesProject = currentProject && currentProject.id === data.projectId;
+
+    preview.style.display = 'block';
+    preview.innerHTML = `
+        <div style="background: ${matchesProject ? '#d1fae5' : '#fef3c7'}; padding: 16px; border-radius: 8px; margin-bottom: 12px;">
+            <strong>${matchesProject ? '✅ Projet correspondant' : '⚠️ Projet différent'}</strong>
+            <br>Projet: ${data.projectName}
+            <br>Modifié par: ${data.editor}
+            <br>Date: ${new Date(data.syncCreatedAt).toLocaleString('fr-FR')}
+        </div>
+        <div style="background: var(--bg); padding: 16px; border-radius: 8px;">
+            <strong>Modifications à appliquer:</strong>
+            <ul style="margin-top: 8px; padding-left: 20px;">
+                ${statusChanges > 0 ? `<li>${statusChanges} changement(s) de statut</li>` : ''}
+                ${photosAdded > 0 ? `<li>${photosAdded} photo(s) ajoutée(s)</li>` : ''}
+                ${notesAdded > 0 ? `<li>${notesAdded} note(s) ajoutée(s)</li>` : ''}
+            </ul>
+        </div>
+    `;
+
+    applyBtn.disabled = !matchesProject;
+    
+    if (!matchesProject) {
+        preview.innerHTML += `
+            <div style="background: #fef3c7; padding: 12px; border-radius: 8px; margin-top: 12px; color: #92400e;">
+                ⚠️ Ce fichier de synchronisation ne correspond pas au projet actuellement sélectionné.
+                Veuillez sélectionner le projet "${data.projectName}" avant d'importer.
+            </div>
+        `;
+    }
+}
+
+/**
+ * Apply all changes from the sync file to the current project.
+ * Updates point statuses, adds photos, adds notes to comments,
+ * and records everything in the status history for traceability.
+ */
+async function applySyncChanges() {
+    if (!pendingSyncData || !currentProject) return;
+
+    const data = pendingSyncData;
+    let appliedCount = 0;
+
+    for (const pointId in data.changes) {
+        const point = currentProject.points.find(p => p.id === pointId);
+        if (!point) {
+            console.warn(`Point ${pointId} not found in project, skipping`);
+            continue;
+        }
+
+        const c = data.changes[pointId];
+
+        // Apply status change
+        if (c.statusChange) {
+            const oldStatus = point.status;
+            point.status = c.statusChange.newStatus;
+
+            if (!point.statusHistory) point.statusHistory = [];
+            point.statusHistory.push({
+                status: c.statusChange.newStatus,
+                date: c.statusChange.date,
+                user: c.statusChange.user,
+                previousStatus: oldStatus,
+                source: 'sync-import'  // Mark as imported change
+            });
+            appliedCount++;
+        }
+
+        // Apply added photos
+        if (c.addedPhotos && c.addedPhotos.length > 0) {
+            if (!point.photos) {
+                point.photos = getPointPhotos(point);
+            }
+            c.addedPhotos.forEach(photo => {
+                point.photos.push(photo.data);
+            });
+            // Update legacy field
+            if (!point.photo && point.photos.length > 0) {
+                point.photo = point.photos[0];
+            }
+            appliedCount += c.addedPhotos.length;
+        }
+
+        // Apply notes as comments appended to the existing comment
+        if (c.addedNotes && c.addedNotes.length > 0) {
+            c.addedNotes.forEach(note => {
+                const noteDate = new Date(note.date).toLocaleString('fr-FR');
+                point.comment += `\n\n--- Note de ${note.user} (${noteDate}) ---\n${note.text}`;
+            });
+            appliedCount += c.addedNotes.length;
+        }
+    }
+
+    // Save and refresh UI
+    await saveProject(currentProject);
+    renderMapMarkers();
+    renderPointsList();
+    updateProjectStats();
+
+    // Clean up
+    pendingSyncData = null;
+    closeModal('syncImportModal');
+    document.getElementById('syncFileInput').value = '';
+    document.getElementById('syncPreview').style.display = 'none';
+    document.getElementById('applySyncBtn').disabled = true;
+
+    alert(
+        `✅ Synchronisation réussie !\n\n` +
+        `${appliedCount} modification(s) appliquée(s) depuis le rapport de ${data.editor}.`
+    );
+}
+
+    </script>
+    <script>
+    // === js/reports/csv.js ===
+/**
+ * ListKontrol - CSV Report Export
+ * ================================
+ * 
+ * Generates a CSV file compatible with Excel, Google Sheets, etc.
+ * Useful for data analysis and bulk status tracking.
+ * 
+ * Format: Standard CSV with header row, quoted fields to handle
+ * commas in addresses and comments.
+ */
+
+/**
+ * Generate and download a CSV report of the current project.
+ */
+async function generateExcelReport() {
+    let csv = 'Titre,Adresse,Commentaire,Statut,Coordonnées,Date de création\n';
+
+    currentProject.points.forEach(point => {
+        const status = point.status === 'done' ? 'Terminé' :
+                      point.status === 'progress' ? 'En cours' : 'À faire';
+
+        // Quote all fields to handle commas and line breaks in content
+        csv += `"${point.title}","${point.address}","${point.comment}","${status}","${point.lat}, ${point.lng}","${new Date(point.createdAt).toLocaleString('fr-FR')}"\n`;
+    });
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `ListK_${currentProject.name}_rapport_${Date.now()}.csv`;
+    link.click();
+}
+
+    </script>
+    <script>
+    // === js/reports/text.js ===
+/**
+ * ListKontrol - Plain Text Report Export
+ * =======================================
+ * 
+ * Generates a simple text report for environments where
+ * HTML is not practical (email body, SMS, print).
+ * Uses box-drawing characters for visual structure.
+ */
+
+/**
+ * Generate and download a plain text report.
+ */
+function generateTextReport() {
+    let report = `═══════════════════════════════════════════════════════\n`;
+    report += `RAPPORT DE SUIVI DE CHANTIER - ListKontrol\n`;
+    report += `═══════════════════════════════════════════════════════\n\n`;
+    report += `Projet: ${currentProject.name}\n`;
+    report += `Date: ${new Date().toLocaleDateString('fr-FR')}\n`;
+    report += `Nombre de points: ${currentProject.points.length}\n\n`;
+
+    const stats = getProjectStats(currentProject);
+    report += `Statut global:\n`;
+    report += `  - À faire: ${stats.todo}\n`;
+    report += `  - En cours: ${stats.progress}\n`;
+    report += `  - Terminé: ${stats.done}\n`;
+    report += `\n═══════════════════════════════════════════════════════\n\n`;
+
+    currentProject.points.forEach((point, index) => {
+        const status = point.status === 'done' ? 'TERMINÉ ✓' :
+                      point.status === 'progress' ? 'EN COURS ⏳' : 'À FAIRE ⏸';
+
+        report += `POINT ${index + 1}: ${point.title}\n`;
+        report += `${'─'.repeat(55)}\n`;
+        report += `Statut: ${status}\n`;
+        report += `Adresse: ${point.address}\n`;
+        report += `Coordonnées: ${point.lat.toFixed(6)}, ${point.lng.toFixed(6)}\n`;
+        report += `Date: ${new Date(point.createdAt).toLocaleString('fr-FR')}\n\n`;
+        report += `Commentaire:\n${point.comment}\n`;
+
+        const photos = getPointPhotos(point);
+        if (photos.length > 0) {
+            report += `\n[${photos.length} photo(s) disponible(s) dans l'application]\n`;
+        }
+        report += `\n═══════════════════════════════════════════════════════\n\n`;
+    });
+
+    const blob = new Blob([report], { type: 'text/plain;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `ListK_${currentProject.name}_rapport_${Date.now()}.txt`;
+    link.click();
+}
+
+    </script>
+    <script>
+    // === js/core/app.js ===
+/**
+ * ListKontrol - Application Entry Point
+ * =======================================
+ * Load order: This file must be loaded LAST (depends on all other modules).
+ */
+
+// === Global Application State ===
+let map = null;
+let currentProject = null;
+let projects = [];
+let currentMarker = null;
+let currentLatLng = null;
+let markers = [];
+let editingPointId = null;
+let archives = [];
+let reportGenerationCancelled = false;
+
+// === Initialization ===
+async function initApp() {
+    await loadProjects();
+    await loadArchives();
+    // Update archive count badge directly (safe - no dependency on load order)
+    var archiveCountEl = document.getElementById('archiveCount');
+    if (archiveCountEl) archiveCountEl.textContent = archives.length;
+    initMap();
+    renderProjects();
+    cleanExpiredArchives();
+    // Initialize cloud sync (non-blocking — app works without it)
+    if (typeof initCloud === 'function') {
+        initCloud().catch(e => console.warn('☁️ Cloud init skipped:', e.message));
+    }
+    console.log('ListKontrol Alpha 0.7.0 initialized');
+}
+
+document.addEventListener('DOMContentLoaded', initApp);
+
+// === Report Format Selection ===
+// Option 2 is the NEW interactive report (key feature of 0.6.0)
+async function generateReport() {
+    if (!currentProject || currentProject.points.length === 0) {
+        alert('Aucun point a exporter pour ce projet');
+        return;
+    }
+
+    const format = prompt(
+        'Choisissez le format de rapport :\n\n' +
+        '1 - Rapport HTML (statique, pour impression)\n' +
+        '2 - Rapport HTML INTERACTIF (modifiable par entreprise)\n' +
+        '3 - Fichier CSV/Excel\n' +
+        '4 - Fichier texte simple\n\n' +
+        'Entrez 1, 2, 3 ou 4 :'
+    );
+
+    if (format === '1' || format === '2') {
+        const mapLayer = prompt(
+            'Quel fond de carte ?\n\n1 - Carte standard\n2 - Satellite\n\nEntrez 1 ou 2 :'
+        );
+        const layerChoice = mapLayer === '2' ? 'satellite' : 'standard';
+
+        if (format === '1') {
+            await generateHTMLReportWithMaps(layerChoice, 19);
+        } else {
+            await generateInteractiveReport(layerChoice, 19);
+        }
+    } else if (format === '3') {
+        await generateExcelReport();
+    } else if (format === '4') {
+        generateTextReport();
+    } else if (format !== null) {
+        alert('Format invalide. Choisissez 1, 2, 3 ou 4');
+    }
+}
+
+// === Report Progress UI ===
+function showReportProgress(current, total, detail) {
+    document.getElementById('reportProgress').style.display = 'block';
+    document.getElementById('reportProgressBackdrop').style.display = 'block';
+    document.getElementById('reportProgressText').textContent = 'Point ' + current + '/' + total;
+    document.getElementById('reportProgressDetail').textContent = detail;
+    document.getElementById('reportProgressBar').style.width = ((current / total) * 100) + '%';
+}
+
+function hideReportProgress() {
+    document.getElementById('reportProgress').style.display = 'none';
+    document.getElementById('reportProgressBackdrop').style.display = 'none';
+}
+
+function cancelReportGeneration() {
+    if (confirm('Voulez-vous vraiment annuler la generation du rapport ?')) {
+        reportGenerationCancelled = true;
+        hideReportProgress();
+    }
+}
+
+// === Modal Background Click to Close ===
+document.querySelectorAll('.modal').forEach(function(modal) {
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            modal.classList.remove('active');
+        }
+    });
+});
+
+// === Mobile Menu Toggle ===
+function toggleMobileMenu() {
+    document.querySelector('.sidebar').classList.toggle('mobile-open');
+}
+
+// === Geolocation ===
+// Requires HTTPS - discovered during Alpha 0.5.0 field testing.
+// Browsers block geolocation on non-secure origins for privacy.
+function centerOnMyLocation() {
+    if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+        alert(
+            'HTTPS REQUIS POUR LA GEOLOCALISATION\n\n' +
+            'Solutions :\n' +
+            '1. Cliquez directement sur la carte\n' +
+            '2. Deployez sur GitHub Pages (HTTPS auto)'
+        );
+        return;
+    }
+
+    if (!navigator.geolocation) {
+        alert('La geolocalisation n\'est pas supportee par votre navigateur');
+        return;
+    }
+
+    var button = event.target;
+    var originalText = button.textContent;
+    button.textContent = 'Localisation...';
+    button.disabled = true;
+
+    navigator.geolocation.getCurrentPosition(
+        function(position) {
+            var lat = position.coords.latitude;
+            var lng = position.coords.longitude;
+
+            map.setView([lat, lng], 18);
+
+            var myLocationIcon = L.divIcon({
+                className: 'my-location-marker',
+                html: '<div style="background:#3b82f6;color:white;width:44px;height:44px;border-radius:50%;border:4px solid white;box-shadow:0 4px 12px rgba(59,130,246,0.5);display:flex;align-items:center;justify-content:center;font-size:24px;animation:pulse 2s infinite;">&#x1F4CD;</div>',
+                iconSize: [44, 44],
+                iconAnchor: [22, 22]
+            });
+
+            var myMarker = L.marker([lat, lng], { icon: myLocationIcon })
+                .addTo(map)
+                .bindPopup('Vous etes ici<br><small>Precision: +/-' + position.coords.accuracy.toFixed(0) + 'm</small>')
+                .openPopup();
+
+            // Remove after 10 seconds to keep map clean
+            setTimeout(function() { map.removeLayer(myMarker); }, 10000);
+
+            button.textContent = originalText;
+            button.disabled = false;
+        },
+        function(error) {
+            var msg = '';
+            switch(error.code) {
+                case error.PERMISSION_DENIED: msg = 'Autorisation refusee'; break;
+                case error.POSITION_UNAVAILABLE: msg = 'Position indisponible'; break;
+                case error.TIMEOUT: msg = 'Delai depasse'; break;
+                default: msg = 'Erreur de geolocalisation';
+            }
+            alert(msg);
+            button.textContent = originalText;
+            button.disabled = false;
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+}
+
+// Close mobile menu when clicking outside
+document.addEventListener('click', function(e) {
+    var sidebar = document.querySelector('.sidebar');
+    var menuToggle = document.querySelector('.menu-toggle');
+
+    if (window.innerWidth <= 768 &&
+        sidebar.classList.contains('mobile-open') &&
+        !sidebar.contains(e.target) &&
+        !menuToggle.contains(e.target)) {
+        sidebar.classList.remove('mobile-open');
+    }
+});
+
+    </script>
+</body>
+</html>
