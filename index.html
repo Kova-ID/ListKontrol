@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <title>ListKontrol - Suivi de Chantier</title>
+
+    <!-- 
+        External Dependencies:
+        - Leaflet.js: Interactive map rendering (MIT License)
+        - leaflet-simple-map-screenshoter: Fast map capture for reports (MIT License)
+        - html2canvas: Fallback screenshot method for older browsers (MIT License)
+        - Barlow & JetBrains Mono: Typography (Open Font License)
+    -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-simple-map-screenshoter"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <!-- Application Styles -->
+    <link rel="stylesheet" href="css/main.css">
+</head>
+<body>
+    <!-- Mobile menu toggle - fixed position button for sidebar access on small screens -->
+    <button class="menu-toggle" onclick="toggleMobileMenu()">☰</button>
+
+    <div class="app-container">
+        <!-- Sidebar: Project navigation and management -->
+        <div class="sidebar">
+            <div class="header">
+                <h1>🏗️ ListK <span class="version">Alpha 0.7.0</span></h1>
+                <p>Suivi professionnel de chantiers</p>
+                <div style="display:flex; align-items:center; gap:8px; margin-top:8px;">
+                    <span id="cloudStatus" style="font-size:12px; font-family:'JetBrains Mono',monospace;">☁️ <span style="color:#6b7280">Hors ligne</span></span>
+                    <button class="btn btn-sm" onclick="showCloudSettings()" style="font-size:11px; padding:2px 8px;" title="Paramètres Cloud">⚙️</button>
+                </div>
+            </div>
+
+            <div class="project-section">
+                <div class="section-title">Nouveau Projet</div>
+                <button class="btn btn-primary" onclick="showNewProjectModal()">
+                    ➕ Créer un projet
+                </button>
+            </div>
+
+            <div class="project-section">
+                <div class="section-title">Archives</div>
+                <button class="btn btn-secondary" onclick="showArchivesModal()">
+                    📦 Voir les archives (<span id="archiveCount">0</span>)
+                </button>
+            </div>
+
+            <div class="project-list" id="projectList">
+                <!-- Projects will be rendered dynamically by js/ui/projects.js -->
+            </div>
+        </div>
+
+        <!-- Main Content: Map and toolbar -->
+        <div class="main-content">
+            <div class="toolbar">
+                <div class="toolbar-left">
+                    <div class="current-project" id="currentProjectName">
+                        Sélectionnez un projet
+                    </div>
+                </div>
+                <div class="toolbar-right" id="projectTools" style="display: none;">
+                    <button class="btn btn-secondary btn-sm" onclick="centerOnMyLocation()" title="Me localiser">
+                        📍 Ma position
+                    </button>
+                    <button class="btn btn-secondary btn-sm" onclick="showPointsPanel()">
+                        📍 Points (<span id="pointsCount">0</span>)
+                    </button>
+                    <button class="btn btn-success btn-sm" onclick="generateReport()">
+                        📊 Générer Rapport
+                    </button>
+                    <button class="btn btn-secondary btn-sm" onclick="showSyncImportModal()" title="Importer modifications depuis rapport interactif">
+                        📥 Importer
+                    </button>
+                    <button class="btn btn-secondary btn-sm" onclick="archiveProject()">
+                        📦 Archiver
+                    </button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteCurrentProject()" title="Supprimer ce projet">
+                        🗑️ Supprimer
+                    </button>
+                </div>
+            </div>
+
+            <div id="map"></div>
+
+            <!-- Report Generation Progress Overlay -->
+            <div id="reportProgress" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 30px 40px; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.3); z-index: 10000; text-align: center; min-width: 320px;">
+                <h3 style="margin: 0 0 20px 0; color: #0f172a;">⏳ Génération du rapport</h3>
+                <div style="font-size: 24px; font-weight: bold; color: #f97316; margin-bottom: 10px;" id="reportProgressText">Point 1/5</div>
+                <div style="background: #e2e8f0; height: 8px; border-radius: 4px; overflow: hidden; margin-bottom: 20px;">
+                    <div id="reportProgressBar" style="background: linear-gradient(90deg, #f97316, #ea580c); height: 100%; width: 20%; transition: width 0.3s;"></div>
+                </div>
+                <div style="color: #64748b; font-size: 14px; margin-bottom: 20px;" id="reportProgressDetail">Capture de la carte...</div>
+                <button onclick="cancelReportGeneration()" style="background: #ef4444; color: white; border: none; padding: 10px 24px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600;">
+                    ❌ Annuler la génération
+                </button>
+            </div>
+            
+            <!-- Backdrop for progress overlay -->
+            <div id="reportProgressBackdrop" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999;"></div>
+
+            <!-- Points Panel: Floating panel listing all points for current project -->
+            <div class="points-panel" id="pointsPanel">
+                <div class="points-header">
+                    <h3>Points du projet</h3>
+                    <button class="close-panel" onclick="hidePointsPanel()">✕</button>
+                </div>
+                <div class="points-list" id="pointsList">
+                    <!-- Points rendered by js/ui/points.js -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Project Modal -->
+    <div class="modal" id="newProjectModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Nouveau Projet</h2>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Nom du projet *</label>
+                    <input type="text" class="form-input" id="projectName" placeholder="Ex: Suivi travaux Route D1">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Description</label>
+                    <textarea class="form-textarea" id="projectDescription" placeholder="Description du projet..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('newProjectModal')">Annuler</button>
+                <button class="btn btn-primary" onclick="createProject()">Créer le projet</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Point Modal -->
+    <div class="modal" id="newPointModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Nouveau Point</h2>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Titre *</label>
+                    <input type="text" class="form-input" id="pointTitle" placeholder="Ex: Réparation chaussée">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Commentaire / Tâche à effectuer *</label>
+                    <textarea class="form-textarea" id="pointComment" placeholder="Décrivez les travaux à réaliser..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Photos</label>
+                    <div class="photo-upload" onclick="document.getElementById('photoInput').click()">
+                        <div>📷 Cliquez pour prendre une photo</div>
+                        <small style="color: var(--text-muted);">Vous pouvez ajouter plusieurs photos</small>
+                        <input type="file" id="photoInput" accept="image/*" capture="environment" multiple style="display: none" onchange="previewPhotos(event)">
+                    </div>
+                    <div id="photoPreviews" class="photo-previews-grid"></div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Statut</label>
+                    <select class="form-select" id="pointStatus">
+                        <option value="todo">À faire</option>
+                        <option value="progress">En cours</option>
+                        <option value="done">Terminé</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Adresse (détectée)</label>
+                    <input type="text" class="form-input" id="pointAddress" readonly>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('newPointModal')">Annuler</button>
+                <button class="btn btn-primary" onclick="savePoint()">Enregistrer le point</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Point Modal -->
+    <div class="modal" id="editPointModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Modifier le Point</h2>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Titre</label>
+                    <input type="text" class="form-input" id="editPointTitle">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Commentaire</label>
+                    <textarea class="form-textarea" id="editPointComment"></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Statut</label>
+                    <select class="form-select" id="editPointStatus">
+                        <option value="todo">À faire</option>
+                        <option value="progress">En cours</option>
+                        <option value="done">Terminé</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Photos</label>
+                    <div id="editPhotoPreviews" class="photo-previews-grid"></div>
+                    <div style="margin-top: 8px;">
+                        <button class="btn btn-secondary btn-sm" onclick="document.getElementById('editPhotoInput').click()">
+                            📷 Ajouter une photo
+                        </button>
+                        <input type="file" id="editPhotoInput" accept="image/*" capture="environment" multiple style="display: none" onchange="previewEditPhotos(event)">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-danger" onclick="deletePoint()">Supprimer</button>
+                <button class="btn btn-secondary" onclick="closeModal('editPointModal')">Annuler</button>
+                <button class="btn btn-primary" onclick="updatePoint()">Enregistrer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Archive Modal -->
+    <div class="modal" id="archiveModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📦 Archiver le projet</h2>
+            </div>
+            <div class="modal-body">
+                <p style="margin-bottom: 20px; color: var(--text-muted);">
+                    Vous êtes sur le point d'archiver le projet <strong id="archiveProjectName"></strong>.
+                    Les archives sont conservées pendant la durée choisie, puis supprimées automatiquement.
+                </p>
+                <div class="form-group">
+                    <label class="form-label">Durée de conservation</label>
+                    <select class="form-select" id="archiveDuration">
+                        <option value="3">3 mois</option>
+                        <option value="6" selected>6 mois</option>
+                        <option value="9">9 mois</option>
+                        <option value="12">12 mois</option>
+                    </select>
+                </div>
+                <div style="background: #fef3c7; padding: 12px; border-radius: 8px; font-size: 14px; color: #92400e;">
+                    ⚠️ Le projet sera retiré des projets actifs et accessible uniquement via les archives.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('archiveModal')">Annuler</button>
+                <button class="btn btn-primary" onclick="confirmArchive()">Archiver</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Archives List Modal -->
+    <div class="modal" id="archivesModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📦 Archives</h2>
+            </div>
+            <div class="modal-body">
+                <div id="archivesList"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('archivesModal')">Fermer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sync Import Modal: For importing interactive report changes back into the app -->
+    <div class="modal" id="syncImportModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📥 Importer des modifications</h2>
+            </div>
+            <div class="modal-body">
+                <p style="margin-bottom: 16px; color: var(--text-muted);">
+                    Importez un fichier de synchronisation (.json) généré depuis un rapport interactif.
+                    Les modifications de statut, photos et commentaires seront appliquées au projet.
+                </p>
+                <div class="photo-upload" onclick="document.getElementById('syncFileInput').click()">
+                    <div>📁 Cliquez pour sélectionner le fichier .json</div>
+                    <input type="file" id="syncFileInput" accept=".json" style="display: none" onchange="handleSyncFileSelect(event)">
+                </div>
+                <div id="syncPreview" style="display: none; margin-top: 16px;"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('syncImportModal')">Annuler</button>
+                <button class="btn btn-primary" id="applySyncBtn" onclick="applySyncChanges()" disabled>Appliquer les modifications</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cloud Settings Modal -->
+    <div class="modal" id="cloudSettingsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>☁️ Paramètres Cloud (Scaleway)</h2>
+            </div>
+            <div class="modal-body">
+                <p style="margin-bottom:16px; color:var(--text-muted); font-size:13px;">
+                    Connectez ListKontrol à votre backend Scaleway pour sauvegarder vos données dans le cloud (Varsovie, UE).
+                    Les données restent aussi en local pour une utilisation hors ligne.
+                </p>
+
+                <div style="margin-bottom:12px;">
+                    <label style="font-weight:600; font-size:13px; display:block; margin-bottom:4px;">URL de l'API</label>
+                    <input type="url" id="cloudApiUrl" class="input" placeholder="https://votre-fonction.functions.fnc.fr-par.scw.cloud" style="width:100%;">
+                </div>
+
+                <div style="margin-bottom:12px;">
+                    <label style="font-weight:600; font-size:13px; display:block; margin-bottom:4px;">Clé API</label>
+                    <input type="password" id="cloudApiKey" class="input" placeholder="scw-xxxxxxxx" style="width:100%;">
+                </div>
+
+                <div style="margin-bottom:16px;">
+                    <label style="font-weight:600; font-size:13px; display:flex; align-items:center; gap:8px;">
+                        <input type="checkbox" id="cloudEnabled">
+                        Activer la synchronisation cloud
+                    </label>
+                </div>
+
+                <div style="background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:12px; font-size:12px; color:var(--text-muted);">
+                    <strong>📍 Datacenter:</strong> Varsovie, Pologne (UE)<br>
+                    <strong>🔒 Chiffrement:</strong> HTTPS + token d'authentification<br>
+                    <strong>📱 Mode hors ligne:</strong> Les données locales restent toujours accessibles
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('cloudSettingsModal')">Annuler</button>
+                <button class="btn btn-primary" onclick="forceCloudSync()">🔄 Sync maintenant</button>
+                <button class="btn btn-success" onclick="saveCloudSettings()">💾 Enregistrer</button>
+            </div>
+        </div>
+    </div>
+
+    <!--
+        JavaScript Modules - Loaded in dependency order:
+        1. core/helpers.js      - Utility functions (timeout, image loading, tile waiting)
+        2. storage/storage.js   - Data persistence (localStorage)
+        3. storage/cloud.js     - Cloud sync (Scaleway serverless) [NEW in 0.7.0]
+        4. map/map.js           - Leaflet map initialization and marker management
+        5. map/capture.js       - Map screenshot capture for report generation
+        6. ui/modals.js         - Modal dialog management
+        7. ui/projects.js       - Project CRUD and sidebar rendering
+        8. ui/archives.js       - Archive management
+        9. ui/points.js         - Point CRUD, status management, multi-photo support
+        10. reports/standard.js  - Standard HTML report generation
+        11. reports/interactive.js - Interactive HTML report with collaboration features
+        12. reports/sync.js      - Sync file import/export for interactive report changes
+        13. reports/csv.js       - CSV/Excel export
+        14. reports/text.js      - Plain text export
+        15. core/app.js          - Application entry point, initialization, global event handlers
+    -->
+    <script src="js/core/helpers.js"></script>
+    <script src="js/storage/storage.js"></script>
+    <script src="js/storage/cloud.js"></script>
+    <script src="js/map/map.js"></script>
+    <script src="js/map/capture.js"></script>
+    <script src="js/ui/modals.js"></script>
+    <script src="js/ui/projects.js"></script>
+    <script src="js/ui/archives.js"></script>
+    <script src="js/ui/points.js"></script>
+    <script src="js/reports/standard.js"></script>
+    <script src="js/reports/interactive.js"></script>
+    <script src="js/reports/sync.js"></script>
+    <script src="js/reports/csv.js"></script>
+    <script src="js/reports/text.js"></script>
+    <script src="js/core/app.js"></script>
+</body>
+</html>
